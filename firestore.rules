@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function validCount(d, k) { return d[k] is int && d[k] >= 0 && d[k] <= 9999; }
+    function validDate(d, k) { return d[k] is string && d[k].size() <= 12; }
+    function isGoogleUser(uid) {
+      return request.auth != null && request.auth.uid == uid
+        && request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+    function validRow(d) {
+      return d.keys().hasOnly(['name', 'basic', 'fdn', 'read', 'basicAt', 'fdnAt', 'readAt'])
+        && d.keys().hasAll(['name', 'basic', 'fdn', 'read', 'basicAt', 'fdnAt', 'readAt'])
+        && d.name is string && d.name.size() <= 16
+        && validCount(d, 'basic') && validCount(d, 'fdn') && validCount(d, 'read')
+        && validDate(d, 'basicAt') && validDate(d, 'fdnAt') && validDate(d, 'readAt');
+    }
+    // ランキング：誰でも読める／Googleでログインした本人が自分の行だけ書ける／記録は下げられない
+    match /ranking/{uid} {
+      allow read: if true;
+      allow create: if isGoogleUser(uid) && validRow(request.resource.data);
+      allow update: if isGoogleUser(uid) && validRow(request.resource.data)
+        && request.resource.data.basic >= resource.data.basic
+        && request.resource.data.fdn >= resource.data.fdn
+        && request.resource.data.read >= resource.data.read;
+      allow delete: if false;   // 削除はオーナーがFirebaseコンソールから行う
+    }
+  }
+}
