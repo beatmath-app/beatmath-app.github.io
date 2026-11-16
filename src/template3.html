@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>コンバットドリル</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#14161f; --panel:#1d2130; --panel2:#252a3d; --line:#33394f;
+  --text:#eef0f7; --sub:#9aa1b9;
+  --me:#4fa3ff; --op:#ff6b6b; --gold:#ffc94d; --good:#3ddc97; --warn:#ffb340; --bad:#ff5c7a; --spell:#c79bff;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:"M PLUS Rounded 1c",system-ui,sans-serif}
+body{max-width:520px;margin:0 auto;padding:12px 12px 40px}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+h1{font-size:19px;margin:0;font-weight:800;letter-spacing:.02em}
+h1 span{color:var(--gold)}
+.score{font-size:12px;color:var(--sub);text-align:right;line-height:1.4}
+.score b{color:var(--text);font-size:14px}
+.seg{display:flex;gap:6px;margin-bottom:8px}
+.seg button{flex:1;padding:8px 0;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--sub);font:inherit;font-weight:700;font-size:13px}
+.seg button.on{background:var(--gold);color:#222;border-color:var(--gold)}
+.seg.mode button.on{background:var(--spell);border-color:var(--spell);color:#1d1030}
+.zone{background:var(--panel);border-radius:16px;padding:10px;border:1px solid var(--line)}
+.zone.op{border-top:3px solid var(--op)}
+.zone.me{border-bottom:3px solid var(--me)}
+.zhead{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.zhead.top{margin-bottom:8px}
+.who{font-weight:800;font-size:13px;white-space:nowrap}
+.op .who{color:var(--op)} .me .who{color:var(--me)}
+.life{font-weight:800;font-size:22px;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.life small{font-size:11px;color:var(--sub);font-weight:700}
+.handrow{display:flex;align-items:center;gap:6px;flex:1;min-width:0;justify-content:center}
+.spell{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(160deg,#3a2a5c,#2a2142);border:1.5px solid var(--spell);color:#efe3ff;border-radius:10px;padding:4px 8px;font-size:12px;font-weight:800;cursor:pointer;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spell .mc{font-size:10px;color:#cdb6ff;font-weight:700}
+.spell.cant{opacity:.5;border-style:dashed}
+.nohand{font-size:11px;color:var(--sub)}
+.hc{font-size:11px;font-weight:800;background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:2px 8px;border-radius:999px;white-space:nowrap}
+.hc b{font-size:13px;color:var(--gold)}
+.landnote{font-size:11px;color:var(--sub);line-height:1.6;margin:-4px 0 8px}
+.landnote b{color:var(--text)}
+.lands{font-size:11px;color:var(--sub);font-weight:700;white-space:nowrap}
+.lands b{color:var(--text);font-size:13px}
+.cardtext{display:none;background:var(--panel2);border-radius:12px;padding:10px 12px;font-size:12.5px;line-height:1.7;margin-top:8px;border-left:3px solid var(--spell)}
+.cardtext.show{display:block}
+.cardtext .nm{font-weight:800;font-size:14px}
+.cardtext .en{font-size:11px;color:var(--sub)}
+.cardtext .warn{color:var(--warn);font-weight:700}
+.row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;min-height:104px;align-items:flex-end}
+.card{position:relative;width:76px;height:100px;border-radius:12px;background:linear-gradient(160deg,#2d3350,#1f2438);border:2px solid #3b4263;padding:6px;display:flex;flex-direction:column;justify-content:space-between;transition:transform .15s,border-color .15s,box-shadow .15s;user-select:none}
+.me .card{cursor:pointer}
+.card .id{font-weight:800;font-size:15px}
+.me .card .id{color:var(--me)} .op .card .id{color:var(--op)}
+.card .kw{display:flex;flex-direction:column;gap:2px;align-items:flex-start}
+.chip{font-size:10px;font-weight:800;padding:1px 6px;border-radius:999px;background:#38406a;color:#cfe0ff}
+.chip.fly{background:#2b5d8c;color:#d8efff}
+.chip.reach{background:#2f6b45;color:#d6ffe5}
+.pt{align-self:flex-end;font-weight:800;font-size:20px;background:#0e1018;border-radius:8px;padding:0 6px;line-height:1.35}
+.card.attack{transform:translateY(-10px);border-color:var(--gold);box-shadow:0 6px 18px rgba(255,201,77,.35)}
+.card.attack::after{content:"⚔ 攻撃";position:absolute;top:-11px;right:-6px;background:var(--gold);color:#222;font-size:10px;font-weight:800;padding:2px 6px;border-radius:999px}
+.card.tapped{opacity:.55;transform:rotate(8deg)}
+.card.tapped::after{content:"タップ中";position:absolute;bottom:-9px;left:50%;transform:translateX(-50%) rotate(-8deg);background:#555;color:#fff;font-size:10px;font-weight:800;padding:1px 6px;border-radius:999px;white-space:nowrap}
+.mid{display:flex;justify-content:space-between;align-items:center;margin:10px 2px;font-size:12px;color:var(--sub)}
+.mid button{background:none;border:none;color:var(--sub);font:inherit;text-decoration:underline;padding:0}
+.premise{background:var(--panel2);border-radius:12px;padding:10px 12px;font-size:12px;color:var(--sub);line-height:1.7;margin:-2px 0 10px;display:none}
+.premise.show{display:block}
+.premise b{color:var(--text)}
+.q{font-weight:800;font-size:15px;margin:12px 2px 8px;text-align:center}
+.actions{display:flex;gap:8px;margin-top:12px}
+.btn{flex:1;padding:14px 0;border-radius:14px;border:none;font:inherit;font-weight:800;font-size:16px;background:var(--gold);color:#222}
+.btn.sec{background:var(--panel2);color:var(--text);flex:.5}
+.result{margin-top:14px}
+.verdict{border-radius:16px;padding:14px;text-align:center;margin-bottom:10px}
+.verdict .big{font-size:24px;font-weight:800}
+.verdict .small{font-size:13px;margin-top:4px;line-height:1.6}
+.v-best{background:rgba(61,220,151,.15);border:2px solid var(--good)} .v-best .big{color:var(--good)}
+.v-slow{background:rgba(255,179,64,.13);border:2px solid var(--warn)} .v-slow .big{color:var(--warn)}
+.v-bad{background:rgba(255,92,122,.13);border:2px solid var(--bad)} .v-bad .big{color:var(--bad)}
+.sec-title{font-weight:800;font-size:14px;margin:16px 2px 8px;display:flex;align-items:center;gap:6px}
+.opts{display:flex;flex-direction:column;gap:6px}
+.opt{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 10px;font-size:13px;cursor:pointer}
+.opt.sel{outline:2px solid var(--me)}
+.opt .mark{width:24px;text-align:center;font-weight:800;font-size:16px}
+.opt .atk{flex:1;font-weight:700}
+.opt .out{font-size:12px;color:var(--sub);text-align:right}
+.g-best .mark{color:var(--good)} .g-slow .mark{color:var(--warn)} .g-open .mark{color:#b9a7ff} .g-loss .mark{color:var(--bad)}
+.tag{font-size:10px;font-weight:800;padding:1px 6px;border-radius:999px;margin-left:4px;vertical-align:1px;white-space:nowrap}
+.tag.you{background:var(--me);color:#06203d}
+.tag.ai{background:var(--good);color:#06301f}
+.tag.naive{background:#5a4a1a;color:#ffe3a1}
+.line{background:var(--panel);border-radius:14px;border:1px solid var(--line);padding:4px 12px}
+.step{padding:9px 0;border-bottom:1px dashed var(--line);font-size:13px;line-height:1.7}
+.step:last-child{border-bottom:none}
+.step .h{font-weight:800}
+.step.s0 .h{color:var(--me)} .step.s1 .h{color:var(--op)}
+.step .d{color:var(--sub)}
+.step .sp{color:var(--spell);font-weight:700}
+.step .fz{color:var(--warn);font-weight:700}
+.step .lv{float:right;font-size:12px;color:var(--sub);font-weight:700}
+.note{font-size:11.5px;color:#b9a7ff;padding:6px 0}
+.end{font-weight:800;padding:10px 0 8px;font-size:14px}
+.end.win{color:var(--good)} .end.loss{color:var(--bad)} .end.open{color:#b9a7ff}
+.tabs{display:flex;gap:6px;margin-bottom:8px}
+.tabs button{flex:1;padding:8px 0;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--sub);font:inherit;font-weight:700;font-size:12px}
+.tabs button.on{background:var(--panel2);color:var(--text);border-color:var(--me)}
+.loading{text-align:center;color:var(--sub);padding:40px 0;font-size:14px;line-height:1.8}
+.hint{font-size:12.5px;color:var(--sub);line-height:1.75;margin-top:8px}
+.hint b{color:var(--text)}
+.cands{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:-2px 0 8px;font-size:11px;color:var(--sub)}
+.cand{display:inline-flex;align-items:center;gap:4px;background:#2a2142;border:1.5px dashed var(--spell);color:#efe3ff;border-radius:10px;padding:3px 8px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
+.cand .pc{color:var(--gold);font-size:12px}
+.cand.none{border-color:#6d7491;color:var(--sub);background:var(--panel2)}
+.spell.q{border-style:dashed;font-size:14px;padding:3px 12px}
+.mtx{width:100%;border-collapse:separate;border-spacing:0 6px;font-size:12px}
+.mtx th{font-size:10.5px;color:var(--sub);font-weight:700;padding:0 2px;line-height:1.35;vertical-align:bottom}
+.mtx th .pc{color:var(--gold);font-size:11px;display:block}
+.mtx td{background:var(--panel);padding:8px 4px;text-align:center;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.mtx td:first-child{text-align:left;padding-left:8px;border-left:1px solid var(--line);border-radius:12px 0 0 12px;font-weight:700}
+.mtx td:last-child{border-right:1px solid var(--line);border-radius:0 12px 12px 0;font-weight:800;font-size:13px}
+.mtx tr.you td{background:#1d2a40}
+.cell{display:inline-block;min-width:30px;padding:3px 4px;border-radius:8px;font-weight:800;cursor:pointer;border:2px solid transparent}
+.cell.w{background:rgba(61,220,151,.18);color:var(--good)} .cell.l{background:rgba(255,92,122,.16);color:var(--bad)} .cell.o{background:rgba(185,167,255,.16);color:#b9a7ff}
+.cell.sel{border-color:var(--gold)}
+.cell small{font-size:9px;font-weight:700;display:block;line-height:1}
+.mk{font-size:14px;margin-right:4px}
+.foot{margin-top:24px;font-size:11px;color:#6d7491;text-align:center;line-height:1.7}
+.foot button{background:none;border:none;color:#6d7491;font:inherit;text-decoration:underline}
+</style>
+</head>
+<body>
+<header>
+  <h1>⚔ コンバット<span>ドリル</span></h1>
+  <div class="score" id="score"></div>
+</header>
+<div class="seg mode" id="modes">
+  <button data-m="basic">基本</button>
+  <button data-m="fdn">インスタント</button>
+  <button data-m="read">読み</button>
+</div>
+<div class="seg" id="levels">
+  <button data-lv="easy">かんたん</button>
+  <button data-lv="normal">ふつう</button>
+  <button data-lv="hard">むずかしい</button>
+</div>
+
+<div id="app"><div class="loading">問題を作成中…</div></div>
+
+<div class="foot">
+  盤面はランダム生成・正解は全パターン探索（アルファベータ法）で算出<br>
+  カード名・効果は『ファウンデーションズ』（FDN）収録カードより。本アプリは非公式のファンメイドです<br>
+  <button id="reset">成績をリセット</button>
+</div>
+
+<script id="bank" type="application/json">/*BANK*/</script>
+<script id="v1-src" type="text/plain">
+/*ENGINE1*/
+</script>
+<script id="v2-src" type="text/plain">
+/*ENGINE2*/
+</script>
+<script>
+(function(){
+'use strict';
+const v1src = document.getElementById('v1-src').textContent;
+const v2src = document.getElementById('v2-src').textContent;
+const wrap = (src, names) => `(function(){var module;\n${src}\nreturn {${names}};})()`;
+const workerSrc = `
+const V1 = ${wrap(v1src, 'generate')};
+const V2 = ${wrap(v2src, 'generate, generateRead, classify, WIN')};
+function v1ToEvents(steps){
+  const evs=[]; let first=true;
+  for(const x of steps){
+    if(!first) evs.push({t:'turn',act:x.side}); first=false;
+    const mask=x.attackers.reduce((m,i)=>m|1<<i,0);
+    evs.push({t:'atk',side:x.side,mask});
+    if(mask){
+      evs.push({t:'blk',pairs:x.blocks.map(p=>[p[0],p[1]])});
+      for(let i=0;i<4;i++) if(x.deadAtt>>i&1) evs.push({t:'die',side:x.side,i});
+      for(let i=0;i<4;i++) if(x.deadDef>>i&1) evs.push({t:'die',side:1-x.side,i});
+      if(x.dmg) evs.push({t:'face',side:1-x.side,n:x.dmg,combat:true});
+    }
+    if(x.life[0]<=0||x.life[1]<=0){ evs.push({t:'end'}); return evs; }
+  }
+  evs.push({t:'horizon'}); return evs;
+}
+function conv(v){ return v>=900? v+1 : v<=-900? v-1 : v; }
+self.onmessage = function(e){
+  const {id, mode, level} = e.data;
+  let p = null;
+  if (mode === 'fdn') p = V2.generate(level, 30000);
+  else if (mode === 'read') p = V2.generateRead(level, 120000);
+  else {
+    const q = V1.generate(level, 20000);
+    if (q) {
+      p = { level, board:q.board, life:q.st.life, hand:[null,null], lands:[0,0], tapped:q.st.tapped, maxPly:q.maxPly, naiveBest:[],
+        opts: q.opts.map(o=>{ const v=conv(o.value); return { attackers:o.attackers, value:v, grade:o.grade, c:V2.classify(v), line:v1ToEvents(o.line) }; }) };
+      const b = Math.max(...p.opts.map(o=>o.value)); p.best = V2.classify(b);
+    }
+  }
+  self.postMessage({ id, puzzle: p });
+};`;
+// CARDS for UI
+const CARDS = (new Function(`var module;${v2src};return CARDS;`))();
+
+let worker = null, reqId = 0;
+const pending = new Map();
+function makeWorker() {
+  try {
+    worker = new Worker(URL.createObjectURL(new Blob([workerSrc], { type: 'text/javascript' })));
+    worker.onmessage = e => { const r = pending.get(e.data.id); if (r) { pending.delete(e.data.id); r(e.data.puzzle); } };
+  } catch (err) { worker = null; }
+}
+makeWorker();
+let localGen = null;
+function genAsync(mode, level) {
+  if (worker) return new Promise(res => { const id = ++reqId; pending.set(id, res); worker.postMessage({ id, mode, level }); });
+  // fallback: run in page
+  if (!localGen) {
+    const g = new Function('self', workerSrc + '; return self.onmessage;');
+    const fake = { postMessage: m => fake._cb && fake._cb(m) };
+    localGen = { h: g(fake), fake };
+  }
+  return new Promise(res => setTimeout(() => { localGen.fake._cb = m => res(m.puzzle); localGen.h({ data: { id: 0, mode, level } }); }, 30));
+}
+
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+let mode = store.get('cd_mode', 'fdn');
+let level = store.get('cd_level', 'normal');
+const emptyStats = () => ({ n: 0, best: 0, slow: 0, streak: 0, top: 0 });
+let allStats = store.get('cd_stats2', {});
+['basic', 'fdn', 'read'].forEach(m => { if (!allStats[m]) allStats[m] = emptyStats(); });
+let BANK = {}; try { BANK = JSON.parse(document.getElementById('bank').textContent); } catch (e) { BANK = {}; }
+let seen = store.get('cd_seen_read', { easy: [], normal: [], hard: [] });
+let viewCell = null;
+
+let puzzle = null, sel = new Set(), answered = false, viewIdx = -1, showPremise = false, showCard = -1;
+const next = {};
+const app = document.getElementById('app');
+const NM = [['A', 'B', 'C', 'D'], ['①', '②', '③', '④']];
+
+function k(m, l) { return m + ':' + l; }
+function prefetch(m, l) { if (!next[k(m, l)]) next[k(m, l)] = genAsync(m, l); }
+function fromBank(l) {
+  const list = BANK[l] || [];
+  const unseen = list.map((_, i) => i).filter(i => !seen[l].includes(i));
+  if (unseen.length <= 2) prefetch('read', l);
+  if (!unseen.length) return null;
+  const i = unseen[Math.floor(Math.random() * unseen.length)];
+  seen[l].push(i); store.set('cd_seen_read', seen);
+  return JSON.parse(JSON.stringify(list[i]));
+}
+async function newPuzzle() {
+  if (mode === 'read') {
+    const b = fromBank(level);
+    if (b) { puzzle = b; sel = new Set(); answered = false; viewIdx = -1; viewCell = null; showCard = -1; render(); return; }
+  }
+  app.innerHTML = `<div class="loading">問題を作成中…${mode === 'fdn' ? '<br><small>（インスタントの読み合いを全探索しています）</small>' : mode === 'read' ? '<br><small>（同梱の問題を解き終えたので新しく作っています。候補ごとに全探索するため、少し時間がかかります）</small>' : ''}</div>`;
+  const m = mode, l = level;
+  prefetch(m, l);
+  const p = await next[k(m, l)]; next[k(m, l)] = null;
+  if (m !== mode || l !== level) return;
+  if (m !== 'read') prefetch(m, l);
+  if (!p) { app.innerHTML = '<div class="loading">問題を作れませんでした。もう一度お試しください。</div>'; return; }
+  puzzle = p; sel = new Set(); answered = false; viewIdx = -1; viewCell = null; showCard = -1;
+  render();
+}
+
+// ---------- text helpers ----------
+const sideName = s => s === 0 ? 'あなた' : '相手';
+function cname(id) { return `《${CARDS[id].ja}》`; }
+function kwHtml(c) { return (c.fly ? '<span class="chip fly">飛行</span>' : '') + (c.reach ? '<span class="chip reach">到達</span>' : ''); }
+function cardHtml(c, side, i, extra) {
+  return `<div class="card ${extra || ''}" data-i="${i}"><div><div class="id">${NM[side][i]}</div><div class="kw">${kwHtml(c)}</div></div><div class="pt">${c.p}/${c.t}</div></div>`;
+}
+function atkLabel(arr) { return arr.length ? arr.map(i => NM[0][i]).join('・') + ' で攻撃' : '攻撃しない'; }
+function outLabel(c) {
+  if (c.cls === 'win') return c.mine ? (c.n === 1 ? 'このターンで勝ち' : `自分の${c.n}ターン目に勝ち`) : `相手の${c.n}ターン目中に勝ち`;
+  if (c.cls === 'loss') return c.mine ? `自分の${c.n}ターン目中に負け` : `相手の${c.n}ターン目に負け`;
+  return `${puzzle.maxPly / 2}往復で決着つかず`;
+}
+const MARK = { best: '◎', slow: '○', open: '△', loss: '×' };
+function sameSet(a, b) { return a.length === b.length && a.every((x, i) => x === b[i]); }
+function castable(side) {
+  const id = puzzle.hand[side]; if (!id) return false;
+  const C = CARDS[id];
+  return id === 'REBUKE' ? puzzle.lands[side] >= 2 : puzzle.lands[side] >= C.cost;
+}
+function tgName(t) { return t[0] === 'P' ? (t[1] === 0 ? 'あなた' : '相手') : NM[t[0]][t[1]]; }
+
+function lineHtml(opt) {
+  const L = opt.line;
+  const life = puzzle.life.slice();
+  let html = '', cur = null, cnt = [1, 0];
+  const flush = () => { if (cur) { html += `<div class="step s${cur.side}"><span class="lv">自 ${Math.max(0, life[0])} / 敵 ${Math.max(0, life[1])}</span><div class="h">${cur.head}</div>${cur.lines.map(l => `<div>${l}</div>`).join('')}</div>`; cur = null; } };
+  const start = side => { flush(); cur = { side, head: side === 0 ? `あなたの${cnt[0]}ターン目` : `相手の${cnt[1]}ターン目`, lines: [] }; };
+  start(0);
+  for (let j = 0; j < L.length; j++) {
+    const e = L[j];
+    // stall: rest has nothing happening
+    if (e.t === 'turn') {
+      const rest = L.slice(j);
+      const active = rest.some(x => x.t === 'cast' || x.t === 'die' || x.t === 'face' || (x.t === 'atk' && x.mask));
+      if (!active) { flush(); html += `<div class="end open">以降はお互いに動けず、膠着します</div>`; return html; }
+      cnt[e.act]++; start(e.act); continue;
+    }
+    switch (e.t) {
+      case 'atk': cur.lines.push(e.mask ? [0, 1, 2, 3].filter(i => e.mask >> i & 1).map(i => NM[e.side][i]).join('・') + ' で攻撃' : '攻撃しない'); break;
+      case 'blk': {
+        if (!e.pairs.length) { cur.lines.push('<span class="d">ブロックなし</span>'); break; }
+        const atkSide = cur.side, by = {};
+        e.pairs.forEach(([b, a]) => { (by[a] = by[a] || []).push(NM[1 - atkSide][b]); });
+        cur.lines.push('<span class="d">' + Object.keys(by).map(a => `${by[a].join('＋')} が ${NM[atkSide][+a]} をブロック`).join('、') + '</span>');
+        break;
+      }
+      case 'cast': cur.lines.push(`<span class="sp">${e.resp ? '↳ 対応して ' : ''}${sideName(e.by)}：${cname(e.c)}${e.kick ? '（キッカー）' : ''} → ${e.tg.map(tgName).join('・')}</span>`); break;
+      case 'fizzle': cur.lines.push(`<span class="fz">${cname(e.c)} は対象がいなくなり立ち消え</span>`); break;
+      case 'die': cur.lines.push(`<span class="d">死亡：${NM[e.side][e.i]}</span>`); break;
+      case 'face': life[e.side] -= e.n; cur.lines.push(`<span class="d">${e.side === 0 ? 'あなた' : '相手'}に ${e.n} 点${e.combat ? '' : '（呪文）'}</span>`); break;
+      case 'gain': life[e.side] += e.n; cur.lines.push(`<span class="d">${sideName(e.side)}は ${e.n} 点回復</span>`); break;
+      case 'approx': flush(); html += `<div class="note">※ここから先は、残った手札を考慮しない近似で読んでいます</div>`; start(cur ? cur.side : 0); cur.lines = []; break;
+    }
+  }
+  flush();
+  const c = opt.c;
+  if (c.cls === 'win') html += `<div class="end win">→ 相手のライフが0に。勝ち！</div>`;
+  else if (c.cls === 'loss') html += `<div class="end loss">→ あなたのライフが0に。負け</div>`;
+  else html += `<div class="end open">→ ${puzzle.maxPly / 2}往復では決着つかず（盤面の評価で比較）</div>`;
+  return html.replace(/<div class="step s0"><span class="lv">[^<]*<\/span><div class="h">[^<]*<\/div><\/div>/g, '');
+}
+
+function firstCast(opt, side) { return opt.line.find(e => e.t === 'cast' && e.by === side); }
+function insight(you, bests) {
+  const b = bests[0];
+  const msgs = [];
+  const isNaive = puzzle.naiveBest.some(a => sameSet(a, you.attackers));
+  if (you.grade !== 'best') {
+    if (isNaive && mode === 'fdn') msgs.push('<b>手札を考えなければ正解に見える手</b>です。');
+    const oc = firstCast(you, 1);
+    if (oc) msgs.push(`この攻撃には相手の${cname(oc.c)}が刺さります（→ ${oc.tg.map(tgName).join('・')}）。`);
+    if (you.grade === 'loss') msgs.push('相手の最善の反撃で先にライフを削り切られます。攻撃してタップした生物は、相手のターンにブロックできません。');
+    else if (you.grade === 'slow') msgs.push(`勝てますが、最善より${(you.c.mine ? you.c.n * 2 : you.c.n * 2 + 1) - (b.c.mine ? b.c.n * 2 : b.c.n * 2 + 1)}手番遅くなります。`);
+    else if (you.grade === 'open') msgs.push('負けはしませんが、より良い攻め方があります。');
+  }
+  const mc = firstCast(b, 0);
+  if (mc) msgs.push(`最善の展開では、あなたの${cname(mc.c)}を ${mc.tg.map(tgName).join('・')} に使います。`);
+  else if (puzzle.hand[0] && b.c.cls === 'win') msgs.push(`最善の展開では、あなたの${cname(puzzle.hand[0])}は使わずに勝てます（相手に使わせない・構えておくこと自体が効いています）。`);
+  if (puzzle.best.cls !== 'win') msgs.push('この盤面は勝ち切れないので、「負けない」ことが最優先です。');
+  return msgs.join('');
+}
+
+function handHtml(side) {
+  const id = puzzle.hand[side];
+  const lands = `<span class="lands">土地 <b>${puzzle.lands[side]}</b></span>`;
+  if (!id) return `<div class="handrow"><span class="hc">手札 <b>0</b>枚</span></div>${mode !== 'basic' ? lands : ''}`;
+  const C = CARDS[id];
+  return `<div class="handrow"><span class="hc">手札 <b>1</b>枚</span><span class="spell ${castable(side) ? '' : 'cant'}" data-card="${side}">${cname(id)}<span class="mc">${C.mana}</span></span></div>${lands}`;
+}
+function cardTextHtml(side) {
+  const id = puzzle.hand[side]; if (!id) return '';
+  const C = CARDS[id];
+  let warn = '';
+  if (!castable(side)) warn = '<div class="warn">マナが足りないので唱えられません</div>';
+  else if (id === 'BURST' && puzzle.lands[side] >= 5) warn = '<div class="warn">土地5枚：キッカーを払って4点にできます</div>';
+  else if (id === 'DIVINE' && puzzle.lands[side] >= 4) warn = '<div class="warn">土地4枚：キッカーを払えます</div>';
+  else if (id === 'REBUKE' && puzzle.lands[side] < 5) warn = '<div class="warn">土地が5枚未満：タップ状態のクリーチャーにだけ唱えられます</div>';
+  return `<div class="cardtext ${showCard === side ? 'show' : ''}"><div class="nm">${cname(id)} <span class="en">${C.en}・${C.mana}・インスタント</span></div>${C.desc}${warn}</div>`;
+}
+
+function scenName(h) { return h ? cname(h) : '基本土地'; }
+function scenShort(h) { return h ? cname(h) : '基本土地'; }
+function candsHtml() {
+  const P = puzzle;
+  let h = `<div class="cands">その1枚は、次のどれか（各${Math.round(100 / P.scen.length)}%・均等）：${P.scen.map((id, i) => `<span class="cand ${id ? '' : 'none'}" data-cand="${i}">${scenShort(id)}</span>`).join('')}</div>`;
+  if (typeof showCard === 'string' && showCard[0] === 'c') {
+    const id = P.scen[+showCard.slice(1)];
+    if (id) { const C = CARDS[id]; h += `<div class="cardtext show"><div class="nm">${cname(id)} <span class="en">${C.en}・${C.mana}・インスタント</span></div>${C.desc}</div>`; }
+    else h += `<div class="cardtext show"><div class="nm">基本土地</div>相手の手札1枚は基本土地です（扱いは「前提ルール」を参照）。</div>`;
+  }
+  return h;
+}
+function cellCls(c) { return c.cls === 'win' ? 'w' : c.cls === 'loss' ? 'l' : 'o'; }
+function cellTxt(c) { return c.cls === 'win' ? '勝' : c.cls === 'loss' ? '負' : '分'; }
+function pct(x) { return Math.round(x * 100) + '%'; }
+function caseSummary(o) {
+  const P = puzzle, g = { win: [], loss: [], open: [] };
+  o.cells.forEach((c, i) => g[c.c.cls].push(scenShort(P.scen[i])));
+  const parts = [];
+  if (g.win.length) parts.push(`${g.win.join('・')}なら<b>勝ち</b>`);
+  if (g.open.length) parts.push(`${g.open.join('・')}なら<b>決着つかず</b>`);
+  if (g.loss.length) parts.push(`${g.loss.join('・')}なら<b>負け</b>`);
+  return parts.join('、');
+}
+function readResultHtml() {
+  const P = puzzle;
+  const mine = [...sel].sort((a, b) => a - b);
+  const you = P.opts.find(o => sameSet(o.attackers, mine));
+  const bests = P.opts.filter(o => o.grade === 'best');
+  const top = P.opts.slice().sort((a, b) => b.ev - a.ev)[0];
+  const vc = you.grade === 'best' ? 'v-best' : you.grade === 'slow' ? 'v-slow' : 'v-bad';
+  const big = you.grade === 'best' ? '◎ 正解！' : you.grade === 'slow' ? '○ 惜しい' : '× 不正解';
+  const yi = P.opts.indexOf(you);
+  if (!viewCell) {
+    // default: your attack, in the case that hurts most (ties → most likely)
+    let si = 0;
+    you.cells.forEach((c, i) => { const b = you.cells[si]; if (c.score < b.score || (c.score === b.score && P.probs[i] > P.probs[si])) si = i; });
+    viewCell = [yi, si];
+  }
+  const [vo, vs] = viewCell;
+  const sorted = P.opts.slice().sort((a, b) => b.ev - a.ev);
+  let hint = `あなたの攻撃は、相手が${caseSummary(you)}。`;
+  if (you.grade !== 'best') hint += `<br>最善手（${atkLabel(top.attackers)}）は、${caseSummary(top)}。`;
+  const vopt = P.opts[vo], cell = vopt.cells[vs];
+  return `<div class="result">
+    <div class="verdict ${vc}"><div class="big">${big}</div>
+      <div class="small">あなた：${atkLabel(you.attackers)} → <b>勝率 ${pct(you.ev)}</b><br>
+      AI：${bests.map(o => atkLabel(o.attackers)).join(' / ')} → <b>勝率 ${pct(top.ev)}</b></div></div>
+    <div class="hint">${hint}</div>
+    <div class="sec-title">🧮 場合分け <span style="font-size:11px;color:var(--sub);font-weight:700">（マスをタップで展開表示）</span></div>
+    <table class="mtx"><thead><tr><th style="text-align:left">攻撃</th>${P.scen.map((h, i) => `<th>${h ? CARDS[h].ja : '基本土地'}</th>`).join('')}<th>勝率</th></tr></thead>
+    <tbody>${sorted.map(o => {
+      const oi = P.opts.indexOf(o);
+      return `<tr class="${o === you ? 'you' : ''}"><td><span class="mk" style="color:${o.grade === 'best' ? 'var(--good)' : o.grade === 'slow' ? 'var(--warn)' : 'var(--bad)'}">${MARK[o.grade]}</span>${o.attackers.length ? o.attackers.map(i => NM[0][i]).join('・') : '攻撃なし'}${o === you ? '<span class="tag you">あなた</span>' : ''}</td>${o.cells.map((c, si) => `<td><span class="cell ${cellCls(c.c)} ${oi === vo && si === vs ? 'sel' : ''}" data-cell="${oi},${si}">${cellTxt(c.c)}${c.c.n ? `<small>${c.c.mine ? '自' : '敵'}${c.c.n}T</small>` : ''}</span></td>`).join('')}<td>${pct(o.ev)}</td></tr>`;
+    }).join('')}</tbody></table>
+    <div class="hint">◎最善（勝率の差5%以内） ○惜しい（15%以内） ×不正解／勝＝勝ち 負＝負け 分＝決着つかず（小さい数字は決着するターン）</div>
+    <div class="sec-title">📜 展開：${atkLabel(vopt.attackers)} × 相手が${scenName(P.scen[vs])}</div>
+    <div class="line">
+      ${lineHtml({ line: cell.line, c: cell.c })}
+    </div>
+    <div class="actions"><button class="btn sec" id="retry">解き直す</button><button class="btn" id="next">次の問題 →</button></div>
+  </div>`;
+}
+
+function render() {
+  const P = puzzle, B = P.board;
+  const read = mode === 'read';
+  const fdn = mode === 'fdn' || read;
+  let html = `
+  <div class="zone op">
+    <div class="zhead top"><span class="who">相手</span>${read ? `<div class="handrow"><span class="hc">手札 <b>1</b>枚</span><span class="spell q">？</span></div><span class="lands">土地 <b>${P.lands[1]}</b></span>` : fdn ? handHtml(1) : '<span></span>'}<span class="life">❤ ${P.life[1]}</span></div>
+    ${read ? candsHtml() : fdn ? cardTextHtml(1) : ''}
+    <div class="row" id="oprow">${B.op.map((c, i) => cardHtml(c, 1, i, (P.tapped >> i & 1) ? 'tapped' : '')).join('')}</div>
+  </div>
+  <div class="mid"><span>あなたのターン・戦闘フェイズ</span><button id="prem">${showPremise ? '前提を閉じる' : '前提ルール'}</button></div>
+  <div class="premise ${showPremise ? 'show' : ''}">
+    <b>この問題の前提</b><br>
+    ${read ? `・<b>相手の手札は1枚</b>。表示された候補のどれか（<b>どれも同じ確率</b>）<br>
+    ・「基本土地」はインスタントを持っていないケース。<b>次の相手のメインフェイズに土地を出しても、唱えられる呪文は増えない</b><br>
+    ・<b>攻撃を宣言したら、お互いの手札が分かったもの</b>として、双方が最善を尽くす<br>
+    ・評価は<b>勝率</b>：勝ち＝1、負け＝0、決着つかず＝0.5 を候補で平均<br>
+    ・マナは土地の枚数だけで判断（色は足りている）。新しいカードは引かない<br>` : ''}${fdn && !read ? `・手札は<b>公開</b>（各自0〜1枚）。お互い<b>最適なタイミング</b>で使う／使わない（AIが双方を担当）<br>
+    ・マナは土地の枚数だけで判断（色は足りている）。お互い新しいカードは引かない（《一瞬の散漫》のドローも無視）<br>
+    ・戦闘前に唱える呪文は「前のターンの終了時に唱えた」ものとして扱う<br>` : '・お互いに<b>新しいカードは出さない</b>／トリックなし（盤面だけの殴り合い）<br>'}
+    ・どの生物も召喚酔いなし。攻撃した生物はタップし、<b>相手のターンにはブロックできない</b><br>
+    ・タップ中の相手生物は、前のターンに攻撃してきた生物（今ターンはブロック不可）<br>
+    ・飛行は、飛行か到達を持つ生物でしかブロックできない<br>
+    ・複数ブロックされたら、攻撃側がダメージを自由に割り振る（現行ルール）<br>
+    ・最大${P.maxPly / 2}往復先まで読んで評価${fdn ? '（あなたの3ターン目以降は、残った手札を考慮しない近似）' : ''}
+  </div>
+  <div class="zone me">
+    <div class="row" id="merow">${B.me.map((c, i) => cardHtml(c, 0, i, sel.has(i) ? 'attack' : '')).join('')}</div>
+    ${fdn ? cardTextHtml(0) : ''}
+    <div class="zhead" style="margin-top:8px"><span class="who">あなた</span>${fdn ? handHtml(0) : '<span></span>'}<span class="life">❤ ${P.life[0]}</span></div>
+  </div>`;
+  if (!answered) {
+    html += `<div class="q">どの生物で攻撃する？</div>
+    <div class="hint" style="text-align:center;margin-top:-4px">カードをタップして攻撃する生物を選択（0体でもOK）${read ? '<br>相手の手札の候補をタップすると効果を確認できます' : fdn ? '<br>手札のインスタントはAIが最適なタイミングで使います' : ''}</div>
+    <div class="actions"><button class="btn" id="go">${sel.size ? '攻撃を宣言' : '攻撃しないで確定'}</button></div>`;
+  } else html += read ? readResultHtml() : resultHtml();
+  app.innerHTML = html;
+  bind();
+}
+
+function resultHtml() {
+  const P = puzzle;
+  const mine = [...sel].sort((a, b) => a - b);
+  const you = P.opts.find(o => sameSet(o.attackers, mine));
+  const bests = P.opts.filter(o => o.grade === 'best');
+  const vc = you.grade === 'best' ? 'v-best' : you.grade === 'slow' ? 'v-slow' : 'v-bad';
+  const big = you.grade === 'best' ? '◎ 正解！' : you.grade === 'slow' ? '○ 惜しい' : you.grade === 'open' ? '△ 不正解' : '× 不正解';
+  const yi = P.opts.indexOf(you), bi = P.opts.indexOf(bests[0]);
+  if (viewIdx < 0) viewIdx = yi;
+  const sorted = P.opts.slice().sort((a, b) => b.value - a.value);
+  const isNaive = o => mode === 'fdn' && P.naiveBest.some(a => sameSet(a, o.attackers));
+  return `<div class="result">
+    <div class="verdict ${vc}"><div class="big">${big}</div>
+      <div class="small">あなた：${atkLabel(you.attackers)} → <b>${outLabel(you.c)}</b><br>
+      AI：${bests.map(o => atkLabel(o.attackers)).join(' / ')} → <b>${outLabel(bests[0].c)}</b></div></div>
+    <div class="hint">${insight(you, bests)}</div>
+    <div class="sec-title">📜 展開（お互い最善を尽くした場合）</div>
+    <div class="tabs">
+      <button data-v="${yi}" class="${viewIdx === yi ? 'on' : ''}">あなたの攻撃</button>
+      <button data-v="${bi}" class="${viewIdx === bi ? 'on' : ''}">AIの最善手</button>
+    </div>
+    <div class="line">
+      <div class="step"><div class="h" style="color:var(--gold)">${atkLabel(P.opts[viewIdx].attackers)}</div></div>
+      ${lineHtml(P.opts[viewIdx])}
+    </div>
+    <div class="sec-title">🧮 全攻撃パターンの評価 <span style="font-size:11px;color:var(--sub);font-weight:700">（タップで展開表示）</span></div>
+    <div class="opts">${sorted.map(o => {
+      const i = P.opts.indexOf(o);
+      return `<div class="opt g-${o.grade} ${i === viewIdx ? 'sel' : ''}" data-v="${i}"><span class="mark">${MARK[o.grade]}</span>
+        <span class="atk">${atkLabel(o.attackers)}${o === you ? '<span class="tag you">あなた</span>' : ''}${o.grade === 'best' ? '<span class="tag ai">AI</span>' : ''}${isNaive(o) && o.grade !== 'best' ? '<span class="tag naive">手札無視なら正解</span>' : ''}</span>
+        <span class="out">${outLabel(o.c)}</span></div>`;
+    }).join('')}</div>
+    <div class="hint">◎最善 ○勝てるが遅い △決着つかず／見劣り ×負け</div>
+    <div class="actions"><button class="btn sec" id="retry">解き直す</button><button class="btn" id="next">次の問題 →</button></div>
+  </div>`;
+}
+
+function bind() {
+  const pr = document.getElementById('prem');
+  if (pr) pr.onclick = () => { showPremise = !showPremise; render(); };
+  document.querySelectorAll('[data-card]').forEach(el => el.onclick = () => { const s = +el.dataset.card; showCard = showCard === s ? -1 : s; render(); });
+  document.querySelectorAll('[data-cand]').forEach(el => el.onclick = () => { const s = 'c' + el.dataset.cand; showCard = showCard === s ? -1 : s; render(); });
+  document.querySelectorAll('[data-cell]').forEach(el => el.onclick = () => { viewCell = el.dataset.cell.split(',').map(Number); render(); });
+  if (!answered) {
+    document.querySelectorAll('#merow .card').forEach(el => {
+      el.onclick = () => { const i = +el.dataset.i; sel.has(i) ? sel.delete(i) : sel.add(i); render(); };
+    });
+    document.getElementById('go').onclick = submit;
+  } else {
+    document.querySelectorAll('[data-v]').forEach(el => el.onclick = () => { viewIdx = +el.dataset.v; render(); });
+    document.getElementById('next').onclick = () => { window.scrollTo(0, 0); newPuzzle(); };
+    document.getElementById('retry').onclick = () => { answered = false; sel = new Set(); viewIdx = -1; viewCell = null; render(); };
+  }
+}
+
+function submit() {
+  const mine = [...sel].sort((a, b) => a - b);
+  const you = puzzle.opts.find(o => sameSet(o.attackers, mine));
+  if (!puzzle.scored) {
+    puzzle.scored = true;
+    const st = allStats[mode];
+    st.n++;
+    if (you.grade === 'best') { st.best++; st.streak++; st.top = Math.max(st.top, st.streak); }
+    else { if (you.grade === 'slow') st.slow++; st.streak = 0; }
+    store.set('cd_stats2', allStats);
+    renderScore();
+  }
+  answered = true; viewIdx = -1; viewCell = null;
+  render();
+  const r = document.querySelector('.result');
+  if (r) r.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderScore() {
+  const st = allStats[mode];
+  const pct = st.n ? Math.round(st.best / st.n * 100) : 0;
+  document.getElementById('score').innerHTML = `正解 <b>${st.best}</b>/${st.n}（${pct}%）<br>連続 <b>${st.streak}</b>・最高 ${st.top}`;
+}
+function renderSeg() {
+  document.querySelectorAll('#levels button').forEach(b => {
+    b.classList.toggle('on', b.dataset.lv === level);
+    b.onclick = () => { if (level === b.dataset.lv) return; level = b.dataset.lv; store.set('cd_level', level); renderSeg(); newPuzzle(); };
+  });
+  document.querySelectorAll('#modes button').forEach(b => {
+    b.classList.toggle('on', b.dataset.m === mode);
+    b.onclick = () => { if (mode === b.dataset.m) return; mode = b.dataset.m; store.set('cd_mode', mode); renderSeg(); renderScore(); newPuzzle(); };
+  });
+}
+document.getElementById('reset').onclick = () => { allStats[mode] = emptyStats(); store.set('cd_stats2', allStats); renderScore(); };
+
+renderSeg(); renderScore(); newPuzzle();
+})();
+</script>
+</body>
+</html>

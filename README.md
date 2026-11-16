@@ -14,6 +14,8 @@
 | `index.html` | アプリ本体（探索エンジン・問題集を含む1ファイル） |
 | `config.js` | Firebase の設定値（公開して問題ない値） |
 | `firestore.rules` | Firestore のセキュリティルール（Firebaseコンソールの「ルール」に貼る） |
+| `src/` | 探索エンジン・画面・テストのソース。`python3 src/build.py` で `src/hosted/index.html` を作り、直下の `index.html` にコピーして公開 |
+| `docs/forge-port.md` | Forge への移植の引き継ぎメモ |
 
 ## ランキングの管理
 

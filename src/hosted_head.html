@@ -1,0 +1,77 @@
+<script>
+window.__HOSTED = true;
+window.__APP_URL = location.origin + location.pathname;
+window.__claudePromise = new Promise(r => { window.__setClaude = r; });
+</script>
+<script type="module">
+// ランキングの保存先：Firebase（Firestore＋Googleログイン）。
+// アプリ本体は claude.ai 版と同じコードで、ここで保存先とログインのAPIを差し替えている。
+const SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
+const MODES = ['basic', 'fdn', 'read'];
+let cfg = null;
+try { cfg = (await import('./config.js')).default; } catch (e) { cfg = null; }
+if (!cfg || !cfg.apiKey || String(cfg.apiKey).startsWith('PASTE')) {
+  window.__setClaude(null);
+} else {
+  let boot = null;
+  // Firebase は「ランキング」を開くか自己ベストを更新したときに初めて読み込む
+  const start = () => boot || (boot = (async () => {
+    const [appm, authm, fs] = await Promise.all([
+      import(SDK + 'firebase-app.js'), import(SDK + 'firebase-auth.js'), import(SDK + 'firebase-firestore.js')]);
+    const app = appm.initializeApp(cfg);
+    const auth = authm.getAuth(app);
+    await new Promise(res => { const u = authm.onAuthStateChanged(auth, () => { u(); res(); }); }); // 前回のログイン状態を復元
+    return { auth, authm, db: fs.getFirestore(app), fs };
+  })());
+  const toErr = e => ({ code: e && e.code === 'unavailable' ? 'unavailable' : 'invalid_argument', message: String(e && e.message || e) });
+  window.__auth = {
+    async signIn() {
+      const b = await start();
+      const p = new b.authm.GoogleAuthProvider();
+      p.setCustomParameters({ prompt: 'select_account' });
+      return (await b.authm.signInWithPopup(b.auth, p)).user;
+    },
+    async signOut() { const b = await start(); await b.authm.signOut(b.auth); },
+    async current() { const b = await start(); const u = b.auth.currentUser; return u ? { uid: u.uid, name: u.displayName || '' } : null; },
+  };
+  window.__setClaude({
+    use: async (name) => {
+      let b;
+      try { b = await start(); } catch (e) { return null; }
+      const { auth, db, fs } = b;
+      const uidNow = () => (auth.currentUser ? auth.currentUser.uid : null);
+      if (name === 'user') return { id: async () => uidNow(), isOwner: async () => false, can: async () => !!uidNow(), profiles: async () => ({}) };
+      if (name !== 'db') return null;
+      return {
+        collection: (path) => ({
+          // 各モード上位50件＋自分の記録だけを購読（読み取り回数を抑える）
+          onSnapshot: (next, error) => {
+            const uid = uidNow();
+            const need = MODES.length + (uid ? 1 : 0);
+            const parts = {}, cache = {}, unsubs = [];
+            let dead = false;
+            const emit = () => {
+              const all = new Map();
+              Object.values(parts).forEach(m => m.forEach((d, id) => all.set(id, d)));
+              const fromCache = Object.keys(parts).length < need || Object.values(cache).some(Boolean);
+              next({ docs: [...all].map(([id, d]) => ({ id, exists: true, data: () => d, metadata: { fromCache, hasPendingWrites: false } })),
+                size: all.size, empty: !all.size, metadata: { fromCache, hasPendingWrites: false }, docChanges: () => [] });
+            };
+            const fail = e => { if (dead) return; dead = true; unsubs.forEach(u => u()); error && error(toErr(e)); };
+            MODES.forEach(m => unsubs.push(fs.onSnapshot(
+              fs.query(fs.collection(db, path), fs.orderBy(m, 'desc'), fs.limit(50)),
+              s => { parts[m] = new Map(s.docs.map(d => [d.id, d.data()])); cache[m] = s.metadata.fromCache; emit(); }, fail)));
+            if (uid) unsubs.push(fs.onSnapshot(fs.doc(db, path, uid),
+              s => { parts.me = new Map(s.exists() ? [[s.id, s.data()]] : []); cache.me = s.metadata.fromCache; emit(); }, fail));
+            return () => { dead = true; unsubs.forEach(u => u()); };
+          },
+          doc: (id) => ({
+            set: (data) => fs.setDoc(fs.doc(db, path, id), data).catch(e => { throw toErr(e); }),
+            delete: () => fs.deleteDoc(fs.doc(db, path, id)).catch(e => { throw toErr(e); }),
+          }),
+        }),
+      };
+    },
+  });
+}
+</script>

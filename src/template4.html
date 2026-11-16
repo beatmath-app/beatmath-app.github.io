@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<!--HEAD_EXTRA-->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>コンバットドリル</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+/*BASECSS*/
+.chip.k2{background:#4a3a1e;color:#ffe2a8}
+.chip.k3{background:#3b2350;color:#ecd2ff}
+.card .kw{flex-direction:row;flex-wrap:wrap;gap:2px}
+.card .kw .chip{font-size:9px;padding:0 4px;line-height:1.5}
+.card.newc{border-style:dashed;border-color:#b98cff}
+.card.dfc{opacity:.75}
+.castbtn{display:block;margin:8px auto 0;padding:7px 12px;border-radius:999px;border:1.5px dashed #b98cff;background:transparent;color:#e6d6ff;font:inherit;font-weight:800;font-size:12px}
+.castbtn.on{background:#b98cff;color:#1d1030;border-style:solid}
+.kwgl{margin-top:4px}
+.kwgl b{color:var(--text)}
+.tools{display:flex;gap:6px;margin-bottom:10px}
+.tools button{flex:1;padding:7px 0;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--text);font:inherit;font-weight:700;font-size:12.5px}
+.tools button b{color:var(--gold)}
+.revbar{display:flex;justify-content:space-between;align-items:center;background:rgba(255,201,77,.12);border:1.5px solid var(--gold);border-radius:12px;padding:8px 12px;margin-bottom:10px;font-size:13px;font-weight:800}
+.revbar button{background:none;border:none;color:var(--sub);font:inherit;font-size:12px;text-decoration:underline}
+.sec-title.tog{cursor:pointer;justify-content:space-between;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:16px 0 8px}
+.sec-title.tog .arrow{font-size:12px;color:var(--sub);white-space:nowrap}
+.sec-title.tog .lbl{min-width:0}
+.step.key{border:2px solid var(--gold);border-radius:12px;padding:9px 10px;margin:6px -6px;background:rgba(255,201,77,.07)}
+.keytag{display:inline-block;background:var(--gold);color:#222;font-size:10px;font-weight:800;border-radius:999px;padding:1px 7px;margin-left:6px;vertical-align:2px}
+.idle{padding:8px 0;border-bottom:1px dashed var(--line);font-size:12px;color:var(--sub)}
+.idle b{color:var(--text)}
+.nm small{font-size:10px;color:var(--sub);font-weight:700;margin-left:1px}
+.mini{margin-top:6px;background:#151826;border-radius:10px;padding:5px 8px;display:flex;flex-direction:column;gap:3px}
+.mini .r{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.mini .ms{font-size:10px;font-weight:800;width:16px}
+.mini .ms.o{color:var(--op)} .mini .ms.m{color:var(--me)}
+.mc2{font-size:11px;font-weight:800;background:var(--panel2);border-radius:6px;padding:1px 6px;color:var(--text)}
+.mc2 i{font-style:normal;font-size:9px;color:#9fd0ff;margin-left:2px}
+.mc2.dead{opacity:.35;text-decoration:line-through}
+.share{margin-top:16px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.share .sid{font-size:11px;color:var(--sub);word-break:break-all}
+.share code{font-size:11px;color:var(--text)}
+.sbtns{display:flex;gap:6px;margin-top:8px}
+.sbtns button{flex:1;padding:9px 0;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font:inherit;font-weight:700;font-size:12px}
+.copybox{width:100%;height:150px;margin-top:8px;background:#0e1018;color:var(--text);border:1px solid var(--line);border-radius:10px;font:12px/1.6 "M PLUS Rounded 1c",sans-serif;padding:8px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#000c;color:#fff;font-size:13px;font-weight:700;padding:9px 16px;border-radius:999px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20}
+.toast.show{opacity:1}
+.modal{position:fixed;inset:0;background:#0009;display:none;align-items:flex-end;justify-content:center;z-index:10}
+.modal.show{display:flex}
+.sheet{background:var(--panel);width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:16px 14px 28px;border-top:3px solid var(--gold)}
+.sheet h2{font-size:16px;margin:0 0 10px}
+.stbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.stbl th{color:var(--sub);font-weight:700;font-size:11px;padding:6px 2px;text-align:center}
+.stbl td{text-align:center;padding:8px 2px;border-top:1px solid var(--line)}
+.stbl td:first-child{text-align:left;font-weight:800}
+.stbl small{display:block;color:var(--sub);font-size:10px}
+.sheet .close{margin-top:14px;width:100%}
+.sheet{max-height:88vh;overflow:auto}
+.linkbar{background:var(--panel2);border:1px dashed var(--line);border-radius:12px;padding:7px 12px;margin-bottom:10px;font-size:12px;color:var(--sub)}
+.pname{display:flex;align-items:center;gap:8px;margin:10px 0 4px;font-size:12px;color:var(--sub);font-weight:700}
+.pname input{flex:1;min-width:0;background:#0e1018;border:1px solid var(--line);border-radius:10px;color:var(--text);font:inherit;font-size:14px;padding:8px 10px}
+.reccard{position:relative;margin-top:14px;border-radius:18px;padding:16px 16px 14px;background:radial-gradient(120% 140% at 0% 0%,#3a2a5c 0%,#1d2130 55%,#14161f 100%);border:2px solid var(--gold);box-shadow:0 8px 24px rgba(0,0,0,.35);overflow:hidden}
+.reccard::after{content:"⚔";position:absolute;right:-6px;bottom:-26px;font-size:110px;opacity:.07}
+.rc-title{font-weight:800;font-size:13px;letter-spacing:.04em}
+.rc-title span{color:var(--gold)}
+.rc-mode{display:inline-block;margin-top:6px;font-size:12px;font-weight:800;background:var(--spell);color:#1d1030;border-radius:999px;padding:2px 10px}
+.rc-num{font-size:56px;font-weight:800;line-height:1.1;margin-top:6px;color:var(--gold)}
+.rc-num span{font-size:16px;color:var(--text);margin-left:6px}
+.rc-sub{font-size:12px;color:var(--sub);font-weight:700}
+.rc-name{font-size:15px;font-weight:800;margin-top:2px}
+.rc-tag{position:absolute;right:14px;top:14px;font-size:11px;color:#cdb6ff;font-weight:800}
+.rc-row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:var(--sub)}
+.rktabs{display:flex;gap:6px;margin:10px 0 8px}
+.rktabs button{flex:1;padding:8px 0;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--sub);font:inherit;font-weight:700;font-size:12.5px}
+.rktabs button.on{background:var(--spell);color:#1d1030;border-color:var(--spell)}
+.rk{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.rk li{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:9px 12px}
+.rk li.me{border-color:var(--me);background:#1d2a40}
+.rk .n{width:26px;text-align:center;font-weight:800;font-size:15px;color:var(--sub)}
+.rk li:nth-child(1) .n{color:#ffd54d} .rk li:nth-child(2) .n{color:#d6dbe6} .rk li:nth-child(3) .n{color:#e3a36b}
+.rk .nm2{flex:1;min-width:0;font-weight:800;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rk .nm2 small{display:block;font-size:10.5px;color:var(--sub);font-weight:700}
+.rk .v{font-weight:800;font-size:18px;color:var(--gold);white-space:nowrap}
+.rk .v small{font-size:11px;color:var(--text);margin-left:2px}
+.rk .del{background:none;border:1px solid var(--line);color:var(--sub);border-radius:8px;font:inherit;font-size:11px;padding:3px 7px}
+.rk .del.arm{border-color:var(--bad);color:var(--bad)}
+.rkme{margin-top:10px;background:var(--panel2);border-radius:12px;padding:10px 12px;font-size:12.5px;line-height:1.7}
+.rkme b{color:var(--gold);font-size:15px}
+.rkst{font-size:12px;color:var(--sub);margin:4px 0 8px;line-height:1.6}
+.rkst.warn{color:var(--warn)}
+.login{margin-top:10px;background:var(--panel2);border:1.5px solid var(--me);border-radius:12px;padding:10px 12px}
+.gbtn{width:100%;padding:11px 0;border-radius:10px;border:none;background:#fff;color:#222;font:inherit;font-weight:800;font-size:14px}
+.linkbtn{background:none;border:none;color:var(--sub);font:inherit;font-size:12px;text-decoration:underline;padding:0 0 0 6px}
+.pname button{background:var(--gold);border:none;border-radius:10px;font:inherit;font-weight:800;font-size:13px;padding:8px 12px;color:#222}
+.xbtn{display:inline-block;background:#000;color:#fff;border:1px solid #444;border-radius:999px;padding:7px 14px;font-weight:800;font-size:12px;text-decoration:none;white-space:nowrap}
+.xbtn.off{opacity:.4;pointer-events:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>⚔ コンバット<span>ドリル</span></h1>
+  <div class="score" id="score"></div>
+</header>
+<div class="seg mode" id="modes">
+  <button data-m="basic">基本</button>
+  <button data-m="fdn">インスタント</button>
+  <button data-m="read">読み</button>
+</div>
+<div class="seg" id="levels">
+  <button data-lv="easy">かんたん</button>
+  <button data-lv="normal">ふつう</button>
+  <button data-lv="hard">むずかしい</button>
+</div>
+<div class="tools">
+  <button id="revBtn">📚 復習 <b id="revN">0</b>問</button>
+  <button id="statBtn">📊 成績</button>
+  <button id="recBtn">🏆 ランキング</button>
+</div>
+
+<div id="app"><div class="loading">問題を作成中…</div></div>
+
+<div class="foot">
+  盤面はランダム生成・正解は全パターン探索（アルファベータ法）で算出<br>
+  カード名・効果は『ファウンデーションズ』（FDN）収録カードより。本アプリは非公式のファンメイドです<br>
+  Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.<br>
+  <button id="reset">成績をリセット</button>
+</div>
+<div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<script id="bank" type="application/json">/*BANK*/</script>
+<script id="v1-src" type="text/plain">
+/*ENGINE1*/
+</script>
+<script id="v2-src" type="text/plain">
+/*ENGINE2*/
+</script>
+<script>
+(function(){
+'use strict';
+const ART_URL = window.__APP_URL || 'https://claude.ai/artifact/ARbVRFd1DaYuaYuSxnfmov';
+const HOSTED = !!window.__HOSTED;
+const v1src = document.getElementById('v1-src').textContent;
+const v2src = document.getElementById('v2-src').textContent;
+const wrap = (src, names) => `(function(){var module;\n${src}\nreturn {${names}};})()`;
+const workerSrc = `
+const V1 = ${wrap(v1src, 'generate, makeSolver, gradeOptions, LEVELS')};
+const V2 = ${wrap(v2src, 'generate, generateRead, solveFdn, solveRead, classify')};
+function v1ToEvents(steps){
+  const evs=[]; let first=true;
+  for(const x of steps){
+    if(!first) evs.push({t:'turn',act:x.side}); first=false;
+    const mask=x.attackers.reduce((m,i)=>m|1<<i,0);
+    evs.push({t:'atk',side:x.side,mask});
+    if(mask){
+      evs.push({t:'blk',pairs:x.blocks.map(p=>[p[0],p[1]])});
+      for(let i=0;i<8;i++) if(x.deadAtt>>i&1) evs.push({t:'die',side:x.side,i});
+      for(let i=0;i<8;i++) if(x.deadDef>>i&1) evs.push({t:'die',side:1-x.side,i});
+      if(x.dmg) evs.push({t:'face',side:1-x.side,n:x.dmg,combat:true});
+      if(x.gainAbs) for(const sd of [0,1]) if(x.gainAbs[sd]) evs.push({t:'gain',side:sd,n:x.gainAbs[sd],ll:true});
+    }
+    if(x.life[0]<=0||x.life[1]<=0){ evs.push({t:'end'}); return evs; }
+  }
+  evs.push({t:'horizon'}); return evs;
+}
+function conv(v){ return v>=900? v+1 : v<=-900? v-1 : v; }
+function basicPuzzle(level, board, st, maxPly, opts){
+  const p = { mode:'basic', level, board, life:st.life.slice(), tapped:st.tapped, hand:[[],[]], lands:[0,0], hc:[], maxPly, naiveBest:[],
+    opts: opts.map(o=>{ const v=conv(o.value); return { cast:null, attackers:o.attackers, value:v, grade:o.grade, c:V2.classify(v), line:v1ToEvents(o.line) }; }) };
+  p.best = V2.classify(Math.max(...p.opts.map(o=>o.value)));
+  return p;
+}
+function solveBasic(spec){
+  const L = V1.LEVELS[spec.level];
+  const s = V1.makeSolver(spec.board, L.maxPly);
+  const st = { a:[(1<<spec.board.me.length)-1,(1<<spec.board.op.length)-1], life:spec.life.slice(), turn:0, tapped:spec.tapped };
+  const opts = s.rootOptions(st); V1.gradeOptions(opts);
+  return basicPuzzle(spec.level, spec.board, st, L.maxPly, opts.map(o=>({attackers:o.attackers,value:o.value,grade:o.grade,line:s.line(st,0,o.attackers,12)})));
+}
+self.onmessage = function(e){
+  const {id, type, mode, level, spec} = e.data;
+  let p = null;
+  try {
+    if (type === 'solve') {
+      p = mode === 'fdn' ? V2.solveFdn(spec) : mode === 'read' ? V2.solveRead(spec) : solveBasic(spec);
+    } else if (mode === 'fdn') p = V2.generate(level, 30000);
+    else if (mode === 'read') p = V2.generateRead(level, 120000);
+    else { const q = V1.generate(level, 20000); if (q) p = basicPuzzle(level, q.board, q.st, q.maxPly, q.opts); }
+  } catch (err) { p = null; }
+  self.postMessage({ id, puzzle: p });
+};`;
+const { CARDS, CARD_IDS } = (new Function(`var module;${v2src};return {CARDS, CARD_IDS};`))();
+
+// ---------- worker ----------
+let worker = null, reqId = 0;
+const pendingReq = new Map();
+try {
+  worker = new Worker(URL.createObjectURL(new Blob([workerSrc], { type: 'text/javascript' })));
+  worker.onmessage = e => { const r = pendingReq.get(e.data.id); if (r) { pendingReq.delete(e.data.id); r(e.data.puzzle); } };
+} catch (err) { worker = null; }
+let localH = null;
+function call(msg) {
+  if (worker) return new Promise(res => { const id = ++reqId; pendingReq.set(id, res); worker.postMessage(Object.assign({ id }, msg)); });
+  if (!localH) { const fake = {}; localH = { h: (new Function('self', workerSrc + '; return self.onmessage;'))(fake), fake }; }
+  return new Promise(res => setTimeout(() => { localH.fake.postMessage = m => res(m.puzzle); localH.h({ data: Object.assign({ id: 0 }, msg) }); }, 30));
+}
+
+// ---------- storage ----------
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+const MODES = ['basic', 'fdn', 'read'], LEVELS = ['easy', 'normal', 'hard'];
+const MODE_JA = { basic: '基本', fdn: 'インスタント', read: '読み' }, LEVEL_JA = { easy: 'かんたん', normal: 'ふつう', hard: 'むずかしい' };
+let mode = store.get('cd_mode', 'fdn'); if (!MODES.includes(mode)) mode = 'fdn';
+let level = store.get('cd_level', 'normal'); if (!LEVELS.includes(level)) level = 'normal';
+const emptyStats = () => ({ n: 0, best: 0, slow: 0, streak: 0, top: 0 });
+let stats = store.get('cd_stats3', {});
+MODES.forEach(m => { stats[m] = stats[m] || {}; LEVELS.forEach(l => { stats[m][l] = stats[m][l] || emptyStats(); }); });
+let review = store.get('cd_review', []);
+let BANK = {}; try { BANK = JSON.parse(document.getElementById('bank').textContent); } catch (e) { BANK = {}; }
+let seen = store.get('cd_seen_read', { easy: [], normal: [], hard: [] });
+let pending = store.get('cd_pending', {});           // むずかしいの未回答問題（モードごと）→ 再開用
+let bestRec = store.get('cd_best', {});              // むずかしいの自己ベスト連続正解
+MODES.forEach(m => { bestRec[m] = bestRec[m] || { best: 0, date: '' }; });
+let playerName = store.get('cd_name', '');
+let curRec = store.get('cd_cur', {});               // 再読み込み時に「今解いていた問題」を判別
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// ---------- state ----------
+let castSel = null;
+let puzzle = null, sel = new Set(), answered = false, viewIdx = -1, viewCell = null, lineOpen = false, scrollToLine = false;
+let showPremise = false, showCard = -1, reviewing = false, loadToken = 0;
+const next = {};
+const app = document.getElementById('app');
+const NM = [['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'], ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧']];
+
+// ---------- 問題ID ----------
+const MCH = { basic: 'b', fdn: 'f', read: 'r' }, LCH = { easy: 'e', normal: 'n', hard: 'h' };
+// 新形式（q2-）：キーワードと手札クリーチャーを含む。旧形式（q-）も読める
+const KWC = [['fly', 'f'], ['reach', 'r'], ['fs', 's'], ['ds', 'd'], ['dt', 'x'], ['tr', 't'], ['me', 'm'], ['vg', 'v'], ['ll', 'l'], ['ind', 'i'], ['df', 'w'], ['hx', 'h'], ['hs', 'q']];
+const crTok = c => '' + c.p + c.t + KWC.filter(([k]) => c[k]).map(([, ch]) => ch).join('') + (c.wd ? 'k' + c.wd : '');
+function crParse(s) {
+  if (!/^[0-9][0-9]/.test(s)) throw 0;
+  const c = { p: +s[0], t: +s[1] };
+  if (!(c.t >= 1)) throw 0;
+  for (let i = 2; i < s.length; i++) {
+    const ch = s[i];
+    if (ch === 'k') { c.wd = +s[++i]; if (!(c.wd >= 1 && c.wd <= 3)) throw 0; continue; }
+    const kw = KWC.find(x => x[1] === ch); if (!kw) throw 0; c[kw[0]] = true;
+  }
+  c.fly = !!c.fly; c.reach = !!c.reach;
+  return c;
+}
+function cardTok(p, id) {
+  if (id === null) return 'L';
+  if (id[0] === 'C') { const d = p.hc[+id.slice(1)]; return 'C' + (d.flash ? 'f' : 'h') + d.cost + crTok(Object.assign({}, d, { hs: false })); }
+  return 'I' + String.fromCharCode(97 + CARD_IDS.indexOf(id));
+}
+function encode(p) {
+  const side = arr => arr.length ? arr.map(crTok).join('Z') : '0';
+  const hand = h => h.length ? h.map(id => cardTok(p, id)).join('Z') : '0';
+  return ['q2', MCH[p.mode] + LCH[p.level], side(p.board.me), side(p.board.op), p.life[0] + 'x' + p.life[1], p.tapped,
+    hand(p.hand[0]), hand(p.hand[1]), '' + p.lands[0] + p.lands[1], p.scen ? p.scen.map(id => cardTok(p, id)).join('Z') : '0'].join('-');
+}
+function decode(id) {
+  try {
+    const f = id.split('-');
+    if (f[0] === 'q') return decodeOld(f);
+    if (f.length !== 10 || f[0] !== 'q2') return null;
+    const m = Object.keys(MCH).find(k => MCH[k] === f[1][0]), l = Object.keys(LCH).find(k => LCH[k] === f[1][1]);
+    const side = s => s === '0' ? [] : s.split('Z').map(crParse);
+    const life = f[4].split('x').map(Number);
+    if (!m || !l || life.length !== 2 || !(life[0] > 0) || !(life[1] > 0)) return null;
+    const hc = [];
+    const card = (tok, sd) => {
+      if (tok === 'L') return null;
+      if (tok[0] === 'I') { const c = CARD_IDS[tok.charCodeAt(1) - 97]; if (!c) throw 0; return c; }
+      if (tok[0] === 'C') { const d = crParse(tok.slice(3)); d.side = sd; d.flash = tok[1] === 'f'; d.haste = !d.flash; d.cost = +tok[2]; delete d.hs; hc.push(d); return 'C' + (hc.length - 1); }
+      throw 0;
+    };
+    const hand = (s, sd) => s === '0' ? [] : s.split('Z').map(x => card(x, sd));
+    const spec = { mode: m, level: l, board: { me: side(f[2]), op: side(f[3]) }, life, tapped: +f[5] || 0 };
+    spec.hand = [hand(f[6], 0), hand(f[7], 1)];
+    spec.lands = [+f[8][0], +f[8][1]];
+    if (m === 'read') { spec.scen = f[9].split('Z').map(x => card(x, 1)); if (spec.scen.length < 2) return null; }
+    spec.hc = hc;
+    if (!spec.board.me.length || spec.board.me.length + hc.filter(d => d.side === 0).length > 8) return null;
+    return spec;
+  } catch (e) { return null; }
+}
+function decodeOld(f) {
+  if (f.length !== 9) return null;
+  const m = Object.keys(MCH).find(k => MCH[k] === f[1][0]), l = Object.keys(LCH).find(k => LCH[k] === f[1][1]);
+  const crs = s => { if (s.length % 3 || !s.length || s.length > 12) throw 0; const r = []; for (let i = 0; i < s.length; i += 3) { const p = +s[i], t = +s[i + 1], k = s[i + 2]; if (!(t >= 1) || !(p >= 0) || !'nfr'.includes(k)) throw 0; r.push({ p, t, fly: k === 'f', reach: k === 'r' }); } return r; };
+  const hd = ch => { if (ch === 'z') return null; const c = CARD_IDS[ch.charCodeAt(0) - 97]; if (!c) throw 0; return c; };
+  const life = f[4].split('x').map(Number);
+  if (!m || !l || life.length !== 2 || !(life[0] > 0) || !(life[1] > 0)) return null;
+  const spec = { mode: m, level: l, board: { me: crs(f[2]), op: crs(f[3]) }, life, tapped: +f[5] || 0, hc: [],
+    hand: [hd(f[6][0]), hd(f[6][1])].map(x => x ? [x] : []), lands: [+f[7][0], +f[7][1]] };
+  if (m === 'read') { spec.scen = f[8].split('').map(hd); if (spec.scen.length < 2) return null; }
+  return spec;
+}
+let bankMap = null;
+function bankLookup(id) {
+  if (!bankMap) { bankMap = new Map(); LEVELS.forEach(l => (BANK[l] || []).forEach(p => { p.mode = 'read'; bankMap.set(encode(p), p); })); }
+  const p = bankMap.get(id);
+  return p ? JSON.parse(JSON.stringify(p)) : null;
+}
+function setHash(id) { try { if (location.hash !== '#' + id) location.hash = id; } catch (e) {} }
+
+// ---------- 出題 ----------
+function k(m, l) { return m + ':' + l; }
+function prefetch(m, l) { if (m !== 'read' && !next[k(m, l)]) next[k(m, l)] = call({ type: 'gen', mode: m, level: l }); }
+function fromBank(l) {
+  const list = BANK[l] || [];
+  const unseen = list.map((_, i) => i).filter(i => !seen[l].includes(i));
+  if (!unseen.length) return null;
+  const i = unseen[Math.floor(Math.random() * unseen.length)];
+  seen[l].push(i); store.set('cd_seen_read', seen);
+  const p = JSON.parse(JSON.stringify(list[i])); p.mode = 'read';
+  return p;
+}
+function setPuzzle(p, fresh = true) {
+  puzzle = p; p.mode = p.mode || mode; p.id = encode(p); p.fresh = fresh && !reviewing;
+  if (p.fresh && p.level === 'hard') { pending[p.mode] = p.id; store.set('cd_pending', pending); }
+  curRec = { id: p.id, fresh: p.fresh, answered: false }; store.set('cd_cur', curRec);
+  sel = new Set(); castSel = null; answered = false; viewIdx = -1; viewCell = null; lineOpen = false; showCard = -1;
+  setHash(p.id);
+  render();
+}
+function loading(msg) { app.innerHTML = `<div class="loading">${msg}</div>`; }
+async function newPuzzle() {
+  if (level === 'hard' && !reviewing && pending[mode]) {
+    const id = pending[mode];
+    if (await loadId(id, true)) return;
+    delete pending[mode]; store.set('cd_pending', pending);
+  }
+  const tok = ++loadToken;
+  if (mode === 'read') {
+    const b = fromBank(level);
+    if (b) { setPuzzle(b); return; }
+    loading('問題を作成中…<br><small>（同梱の問題を解き終えたので新しく作っています。候補ごとに全探索するため、少し時間がかかります）</small>');
+    const p = await call({ type: 'gen', mode: 'read', level });
+    if (tok !== loadToken) return;
+    return p ? setPuzzle(p) : loading('問題を作れませんでした。もう一度お試しください。');
+  }
+  loading(`問題を作成中…${mode === 'fdn' ? '<br><small>（インスタントの読み合いを全探索しています）</small>' : ''}`);
+  const m = mode, l = level;
+  if (!next[k(m, l)]) next[k(m, l)] = call({ type: 'gen', mode: m, level: l });
+  const p = await next[k(m, l)]; next[k(m, l)] = null;
+  if (tok !== loadToken) return;
+  prefetch(m, l);
+  if (!p) { loading('問題を作れませんでした。もう一度お試しください。'); return; }
+  setPuzzle(p);
+}
+async function loadId(id, fresh) {
+  const spec = decode(id);
+  if (!spec) return false;
+  if (fresh === undefined) fresh = !reviewing && (pending[spec.mode] === id || (curRec.id === id && curRec.fresh && !curRec.answered));
+  const tok = ++loadToken;
+  if (mode !== spec.mode || level !== spec.level) { mode = spec.mode; level = spec.level; store.set('cd_mode', mode); store.set('cd_level', level); renderSeg(); renderScore(); }
+  if (spec.mode === 'read') { const b = bankLookup(id); if (b) { setPuzzle(b, fresh); return true; } }
+  loading('問題IDから盤面を復元して解いています…');
+  const p = await call({ type: 'solve', mode: spec.mode, spec });
+  if (tok !== loadToken) return true;
+  if (!p) { loading('この問題IDは読み込めませんでした。'); return false; }
+  setPuzzle(p, fresh);
+  return true;
+}
+
+// ---------- 復習 ----------
+function saveReview() { store.set('cd_review', review); document.getElementById('revN').textContent = review.length; }
+function startReview() {
+  if (!review.length) { toast('復習する問題はありません（間違えた問題がここにたまります）'); return; }
+  reviewing = true; loadId(review[0].id);
+}
+function stopReview() { reviewing = false; newPuzzle(); }
+
+// ---------- text helpers ----------
+const sideName = s => s === 0 ? 'あなた' : '相手';
+const KW_LABEL = [['fly', '飛行'], ['reach', '到達'], ['fs', '先制攻撃'], ['ds', '二段攻撃'], ['dt', '接死'], ['tr', 'トランプル'], ['me', '威迫'], ['vg', '警戒'], ['ll', '絆魂'], ['ind', '破壊不能'], ['df', '防衛'], ['hx', '呪禁'], ['wd', '護法'], ['hs', '速攻']];
+const KW_DESC = { '飛行': '飛行か到達を持つクリーチャーでしかブロックされない', '到達': '飛行クリーチャーをブロックできる', '先制攻撃': '通常より先にダメージを与える', '二段攻撃': '先制ダメージと通常ダメージの2回ダメージを与える',
+  '接死': '1点でもダメージを与えたクリーチャーを破壊する（割り振りは1点で致死扱い）', 'トランプル': 'ブロッカーに致死ダメージを割り振った残りをプレイヤーに与えられる', '威迫': '2体以上でないとブロックできない', '警戒': '攻撃してもタップしない（相手のターンにブロックできる）',
+  '絆魂': '与えたダメージぶんライフを得る', '破壊不能': 'ダメージや「破壊する」で死なない（タフネス0以下なら死ぬ）', '防衛': '攻撃できない', '呪禁': '相手の呪文の対象にならない', '護法': '相手の呪文の対象にするには、追加で{N}を払う必要がある', '速攻': '戦場に出たターンから攻撃できる' };
+function kwList(c) { const r = []; for (const [k, l] of KW_LABEL) if (c[k]) r.push(k === 'wd' ? `護法{${c.wd}}` : l); return r; }
+const isCre = id => !!id && id[0] === 'C';
+const hcd = id => puzzle.hc[+id.slice(1)];
+function slotOf(id) { const d = hcd(id); let n = d.side === 0 ? puzzle.board.me.length : puzzle.board.op.length; for (const x of puzzle.hc) { if (x === d) break; if (x.side === d.side) n++; } return n; }
+function allCr(side) { const P = puzzle; const r = (side ? P.board.op : P.board.me).slice(); for (const d of P.hc || []) if (d.side === side) r.push(d); return r; }
+function creName(d) { const k = kwList(d).filter(x => x !== '速攻'); return `${d.haste ? '速攻' : '瞬速'}クリーチャー ${d.p}/${d.t}${k.length ? '・' + k.join('・') : ''}`; }
+const cname = id => isCre(id) ? `《${creName(hcd(id))}》` : `《${CARDS[id].ja}》`;
+const cshort = id => isCre(id) ? `${hcd(id).haste ? '速攻' : '瞬速'}${hcd(id).p}/${hcd(id).t}` : CARDS[id].ja;
+const cmana = id => isCre(id) ? `{${hcd(id).cost}}` : CARDS[id].mana;
+const scenShort = h => h ? cname(h) : '基本土地';
+function kwHtml(c) { return kwList(c).map(l => `<span class="chip ${l === '飛行' ? 'fly' : l === '到達' ? 'reach' : l === '速攻' ? 'k3' : 'k2'}">${l}</span>`).join(''); }
+function kwGlossary() {
+  const seen = new Set();
+  for (const side of [0, 1]) for (const c of allCr(side)) for (const l of kwList(c)) seen.add(l.startsWith('護法') ? '護法' : l);
+  if (!seen.size) return '';
+  return '<div class="kwgl"><b>この盤面のキーワード</b><br>' + [...seen].map(l => `・<b>${l}</b>：${KW_DESC[l]}`).join('<br>') + '</div>';
+}
+function creText(id) {
+  const d = hcd(id);
+  const base = d.haste ? '速攻：戦場に出たターンから攻撃できる。自分のメインフェイズに唱える（戦闘前に出すかは「戦闘前に唱える」ボタンで選ぶ）'
+    : '瞬速：インスタントと同じタイミングで唱えられる（相手の攻撃中に出してブロック、など）。出たターンは攻撃できない';
+  const k = kwList(d).filter(x => x !== '速攻');
+  return base + (k.length ? '<br>' + k.map(l => `${l}：${KW_DESC[l.startsWith('護法') ? '護法' : l]}`).join('<br>') : '');
+}
+
+function cardHtml(c, side, i, extra) {
+  return `<div class="card ${extra || ''}" data-i="${i}"><div><div class="id">${NM[side][i]}</div><div class="kw">${kwHtml(c)}</div></div><div class="pt">${c.p}/${c.t}</div></div>`;
+}
+function atkLabel(arr) { return arr.length ? arr.map(i => NM[0][i]).join('・') + ' で攻撃' : '攻撃しない'; }
+function optLabel(o) { return (o.cast ? `${NM[0][slotOf(o.cast)]}を唱えて ` : '') + atkLabel(o.attackers); }
+function optShort(o) { return (o.cast ? `${NM[0][slotOf(o.cast)]}唱え＋` : '') + (o.attackers.length ? o.attackers.map(i => NM[0][i]).join('・') : '攻撃なし'); }
+const optMatch = (o, cast, mine) => (o.cast || null) === (cast || null) && sameSet(o.attackers, mine);
+function outLabel(c) {
+  if (c.cls === 'win') return c.mine ? (c.n === 1 ? 'このターンで勝ち' : `自分の${c.n}ターン目に勝ち`) : `相手の${c.n}ターン目中に勝ち`;
+  if (c.cls === 'loss') return c.mine ? `自分の${c.n}ターン目中に負け` : `相手の${c.n}ターン目に負け`;
+  return `${puzzle.maxPly / 2}往復で決着つかず`;
+}
+const MARK = { best: '◎', slow: '○', open: '△', loss: '×' };
+const sameSet = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+const pct = x => Math.round(x * 100) + '%';
+function castable(side, id) {
+  if (!id) return false;
+  if (isCre(id)) return puzzle.lands[side] >= hcd(id).cost;
+  return id === 'REBUKE' ? puzzle.lands[side] >= 2 : puzzle.lands[side] >= CARDS[id].cost;
+}
+
+// ---------- 展開表示 ----------
+function lineHtml(line, outcome) {
+  const P = puzzle;
+  const cr = [allCr(0), allCr(1)];
+  const nb = [P.board.me.length, P.board.op.length];
+  const alive = cr.map((a, sd) => a.map((_, i) => i < nb[sd])), ctr = cr.map(a => a.map(() => 0));
+  const shown = alive.map(a => a.slice());
+  const life = P.life.slice();
+  const dn = (side, i) => NM[side][i >= nb[side] && P.mode === 'read' && side === 1 ? nb[1] : i];
+  const mentioned = new Set();
+  const nm = (side, i) => {
+    const key = side + ':' + i, c = cr[side][i];
+    let s = dn(side, i);
+    if (!mentioned.has(key)) { mentioned.add(key); s += `<small>(${c.p + ctr[side][i]}/${c.t + ctr[side][i]})</small>`; }
+    return `<span class="nm">${s}</span>`;
+  };
+  const tgName = t => t[0] === 'P' ? sideName(t[1]) : nm(t[0], t[1]);
+  // turn blocks
+  const blocks = []; let cur = { side: 0, n: 1, ev: [] }; const cnt = [1, 0];
+  for (const e of line) { if (e.t === 'turn') { blocks.push(cur); cnt[e.act]++; cur = { side: e.act, n: cnt[e.act], ev: [] }; } else cur.ev.push(e); }
+  blocks.push(cur);
+  const active = b => b.ev.some(e => ['cast', 'die', 'face', 'gain', 'blk'].includes(e.t) || (e.t === 'atk' && e.mask));
+  const mini = () => {
+    const row = side => cr[side].map((c, i) => shown[side][i] ? `<span class="mc2 ${alive[side][i] ? '' : 'dead'}">${dn(side, i)}${c.p + ctr[side][i]}/${c.t + ctr[side][i]}${kwList(c).length ? '<i>' + kwList(c).map(l => l.slice(0, 2)).join('') + '</i>' : ''}</span>` : '').join('');
+    return `<div class="mini"><div class="r"><span class="ms o">敵</span>${row(1)}</div><div class="r"><span class="ms m">自</span>${row(0)}</div></div>`;
+  };
+  let html = '', idleRun = 0, idleNote = '', idleFirst = null;
+  const flushIdle = () => {
+    if (!idleRun) return;
+    const label = idleRun === 1 ? `${idleFirst.side === 0 ? 'あなた' : '相手'}の${idleFirst.n}ターン目：<b>攻撃なし</b>` : `お互い<b>攻撃なし</b>（${idleRun}手番）`;
+    html += `<div class="idle">${idleNote}${label}</div>`; idleRun = 0; idleNote = ''; idleFirst = null;
+  };
+  const stack = [];
+  for (let bi = 0; bi < blocks.length; bi++) {
+    const b = blocks[bi];
+    const note = b.ev.some(e => e.t === 'approx') ? '<span class="note">※ここから先は、残った手札を考慮しない近似で読んでいます</span><br>' : '';
+    if (!active(b)) {
+      if (!blocks.slice(bi).some(active)) { flushIdle(); html += `${note ? `<div class="idle">${note}</div>` : ''}<div class="end open">以降はお互いに動けず、膠着します</div>`; return html; }
+      if (!idleRun) idleFirst = b;
+      idleRun++; idleNote = idleNote || note; continue;
+    }
+    flushIdle();
+    const lines = [];
+    let decisive = false;
+    for (const e of b.ev) {
+      switch (e.t) {
+        case 'atk': lines.push(e.mask ? [0, 1, 2, 3, 4, 5, 6, 7].filter(i => e.mask >> i & 1).map(i => nm(e.side, i)).join('・') + ' で攻撃' : '攻撃しない'); break;
+        case 'blk': {
+          if (!e.pairs.length) { lines.push('<span class="d">ブロックなし</span>'); break; }
+          const by = {};
+          e.pairs.forEach(([bb, a]) => { (by[a] = by[a] || []).push(nm(1 - b.side, bb)); });
+          lines.push('<span class="d">' + Object.keys(by).map(a => `${by[a].join('＋')} が ${nm(b.side, +a)} をブロック`).join('、') + '</span>');
+          break;
+        }
+        case 'cast': stack.push(e); lines.push(`<span class="sp">${e.resp ? '↳ 対応して ' : ''}${sideName(e.by)}：${cname(e.c)}${e.kick ? '（キッカー）' : ''}${e.tg.length ? ' → ' + e.tg.map(tgName).join('・') : 'を唱える'}</span>`); break;
+        case 'enter': alive[e.side][e.i] = true; shown[e.side][e.i] = true; lines.push(`<span class="sp">${nm(e.side, e.i)} が戦場に出た</span>`); break;
+        case 'resolve': { const x = stack.pop(); if (x && (x.c === 'FLIGHT' || x.c === 'VEIL')) { const t = x.tg[0]; if (alive[t[0]][t[1]]) ctr[t[0]][t[1]]++; } break; }
+        case 'fizzle': stack.pop(); lines.push(`<span class="fz">${cname(e.c)} は対象がいなくなり立ち消え</span>`); break;
+        case 'die': lines.push(`<span class="d">死亡：${nm(e.side, e.i)}</span>`); alive[e.side][e.i] = false; break;
+        case 'face': life[e.side] -= e.n; lines.push(`<span class="d">${sideName(e.side)}に ${e.n} 点${e.combat ? '' : '（呪文）'}</span>`); if (life[e.side] <= 0) decisive = true; break;
+        case 'gain': life[e.side] += e.n; lines.push(`<span class="d">${sideName(e.side)}は${e.ll ? '絆魂で' : ''} ${e.n} 点回復</span>`); break;
+      }
+    }
+    html += `<div class="step s${b.side} ${decisive ? 'key' : ''}"><span class="lv">自 ${Math.max(0, life[0])} / 敵 ${Math.max(0, life[1])}</span><div class="h">${b.side === 0 ? 'あなた' : '相手'}の${b.n}ターン目${decisive ? '<span class="keytag">決着</span>' : ''}</div>${note}${lines.map(l => `<div>${l}</div>`).join('')}${mini()}</div>`;
+  }
+  flushIdle();
+  if (outcome.cls === 'win') html += `<div class="end win">→ 相手のライフが0に。勝ち！</div>`;
+  else if (outcome.cls === 'loss') html += `<div class="end loss">→ あなたのライフが0に。負け</div>`;
+  else html += `<div class="end open">→ ${puzzle.maxPly / 2}往復では決着つかず（盤面の評価で比較）</div>`;
+  return html;
+}
+
+// ---------- 手札表示 ----------
+function handHtml(side) {
+  const hand = puzzle.hand[side];
+  const lands = `<span class="lands">土地 <b>${puzzle.lands[side]}</b></span>`;
+  if (!hand.length) return `<div class="handrow"><span class="hc">手札 <b>0</b>枚</span></div>${lands}`;
+  return `<div class="handrow"><span class="hc">手札 <b>${hand.length}</b>枚</span>${hand.map((id, k) => `<span class="spell ${castable(side, id) ? '' : 'cant'}" data-card="${side}:${k}">${isCre(id) ? (hcd(id).haste ? '⚡' : '🌀') + cshort(id) : cname(id)}<span class="mc">${cmana(id)}</span></span>`).join('')}</div>${lands}`;
+}
+function cardTextHtml(side) {
+  if (typeof showCard !== 'string' || !showCard.startsWith(side + ':')) return '';
+  const id = puzzle.hand[side][+showCard.split(':')[1]]; if (!id) return '';
+  const L = puzzle.lands[side];
+  let warn = '';
+  if (!castable(side, id)) warn = '<div class="warn">マナが足りないので唱えられません</div>';
+  else if (side === 0 && puzzle.hand[0].length > 1) warn = '<div class="warn">土地は手札のどちらか1枚分しかありません（両方は唱えられない）</div>';
+  else if (id === 'BURST' && L >= 5) warn = '<div class="warn">土地5枚：キッカーを払って4点にできます</div>';
+  else if (id === 'DIVINE' && L >= 4) warn = '<div class="warn">土地4枚：キッカーを払えます</div>';
+  else if (id === 'REBUKE' && L < 5) warn = '<div class="warn">土地が5枚未満：タップ状態のクリーチャーにだけ唱えられます</div>';
+  if (isCre(id)) return `<div class="cardtext show"><div class="nm">${cname(id)} <span class="en">${cmana(id)}・クリーチャー</span></div>${creText(id)}${warn}</div>`;
+  const C = CARDS[id];
+  return `<div class="cardtext show"><div class="nm">${cname(id)} <span class="en">${C.en}・${C.mana}・インスタント</span></div>${C.desc}${warn}</div>`;
+}
+function candsHtml() {
+  const P = puzzle;
+  let h = `<div class="cands">その1枚は、次のどれか（各${Math.round(100 / P.scen.length)}%・均等）：${P.scen.map((id, i) => `<span class="cand ${id ? '' : 'none'}" data-cand="${i}">${id ? (isCre(id) ? (hcd(id).haste ? '⚡' : '🌀') + cshort(id) : cname(id)) : '基本土地'}</span>`).join('')}</div>`;
+  if (typeof showCard === 'string' && showCard[0] === 'c') {
+    const id = P.scen[+showCard.slice(1)];
+    if (id && isCre(id)) h += `<div class="cardtext show"><div class="nm">${cname(id)} <span class="en">${cmana(id)}・クリーチャー</span></div>${creText(id)}</div>`;
+    else if (id) { const C = CARDS[id]; h += `<div class="cardtext show"><div class="nm">${cname(id)} <span class="en">${C.en}・${C.mana}・インスタント</span></div>${C.desc}</div>`; }
+    else h += `<div class="cardtext show"><div class="nm">基本土地</div>相手の手札1枚は基本土地です（扱いは「前提ルール」を参照）。</div>`;
+  }
+  return h;
+}
+function hasteInHand() { return (puzzle.hand[0] || []).find(id => isCre(id) && hcd(id).haste && castable(0, id)); }
+
+// ---------- 問題画面 ----------
+function render() {
+  const P = puzzle, B = P.board;
+  const read = P.mode === 'read', fdn = P.mode !== 'basic';
+  let html = reviewing ? `<div class="revbar"><span>📚 復習中（残り${review.length}問）</span><button id="revStop">やめる</button></div>`
+    : !P.fresh ? `<div class="linkbar">🔗 リンクから開いた問題です（成績・連続記録の対象外）</div>` : '';
+  html += `
+  <div class="zone op">
+    <div class="zhead top"><span class="who">相手</span>${read ? `<div class="handrow"><span class="hc">手札 <b>1</b>枚</span><span class="spell q">？</span></div><span class="lands">土地 <b>${P.lands[1]}</b></span>` : fdn ? handHtml(1) : '<span></span>'}<span class="life">❤ ${P.life[1]}</span></div>
+    ${read ? candsHtml() : fdn ? cardTextHtml(1) : ''}
+    <div class="row" id="oprow">${B.op.map((c, i) => cardHtml(c, 1, i, (P.tapped >> i & 1) ? 'tapped' : '')).join('')}</div>
+  </div>
+  <div class="mid"><span>あなたのターン・戦闘フェイズ</span><button id="prem">${showPremise ? '前提を閉じる' : '前提ルール'}</button></div>
+  <div class="premise ${showPremise ? 'show' : ''}">
+    <b>この問題の前提</b><br>
+    ${kwGlossary()}<br>
+    ${read ? `・<b>相手の手札は1枚</b>。表示された候補のどれか（<b>どれも同じ確率</b>）<br>
+    ・「基本土地」はインスタントを持っていないケース。<b>次の相手のメインフェイズに土地を出しても、唱えられる呪文は増えない</b><br>
+    ・<b>攻撃を宣言したら、お互いの手札が分かったもの</b>として、双方が最善を尽くす<br>
+    ・評価は<b>勝率</b>：勝ち＝1、負け＝0、決着つかず＝0.5 を候補で平均<br>
+    ・マナは土地の枚数だけで判断（色は足りている）。新しいカードは引かない<br>` : fdn ? `・手札は<b>公開</b>。お互い<b>最適なタイミング</b>で使う／使わない（AIが双方を担当）<br>
+    ・マナは土地の枚数だけで判断（色は足りている）。お互い新しいカードは引かない（《一瞬の散漫》のドローも無視）<br>
+    ・戦闘前に唱えるインスタントは「前のターンの終了時に唱えた」ものとして扱う<br>` : '・お互いに<b>新しいカードは出さない</b>／トリックなし（盤面だけの殴り合い）<br>'}
+    ${fdn ? `・手札のクリーチャー：⚡速攻は自分のメインフェイズに唱えて、そのターンから攻撃できる／🌀瞬速はいつでも唱えられるが、出たターンは攻撃できない<br>
+    ・自分の手札が2枚のときは、<b>土地はどちらか1枚分しかない</b>（両方は唱えられない）<br>` : ''}
+    ・盤面の生物は召喚酔いなし。攻撃した生物はタップし（警戒は除く）、<b>相手のターンにはブロックできない</b><br>
+    ・タップ中の相手生物は、前のターンに攻撃してきた生物（今ターンはブロック不可）<br>
+    ・飛行は、飛行か到達を持つ生物でしかブロックできない<br>
+    ・複数ブロックされたら、攻撃側がダメージを自由に割り振る（現行ルール）<br>
+    ・最大${P.maxPly / 2}往復先まで読んで評価${fdn ? '（あなたの3ターン目以降は、残った手札を考慮しない近似）' : ''}
+  </div>
+  <div class="zone me">
+    <div class="row" id="merow">${B.me.map((c, i) => cardHtml(c, 0, i, (sel.has(i) ? 'attack' : '') + (c.df ? ' dfc' : ''))).join('')}${castSel ? cardHtml(Object.assign({ hs: true }, hcd(castSel)), 0, slotOf(castSel), 'newc' + (sel.has(slotOf(castSel)) ? ' attack' : '')) : ''}</div>
+    ${!answered && hasteInHand() ? `<button class="castbtn ${castSel ? 'on' : ''}" id="castBtn">⚡ ${castSel ? '戦闘前に唱える（選択中）' : '速攻クリーチャーを戦闘前に唱える'}</button>` : (answered && castSel ? `<div class="hint" style="text-align:center">⚡ ${NM[0][slotOf(castSel)]} を戦闘前に唱えた</div>` : '')}
+    ${fdn ? cardTextHtml(0) : ''}
+    <div class="zhead" style="margin-top:8px"><span class="who">あなた</span>${fdn ? handHtml(0) : '<span></span>'}<span class="life">❤ ${P.life[0]}</span></div>
+  </div>`;
+  if (!answered) {
+    html += `<div class="q">どの生物で攻撃する？</div>
+    <div class="hint" style="text-align:center;margin-top:-4px">カードをタップして攻撃する生物を選択（0体でもOK・防衛は攻撃不可）${read ? '<br>相手の手札の候補をタップすると効果を確認できます' : fdn ? '<br>手札のインスタント・瞬速クリーチャーはAIが最適なタイミングで使います' : ''}</div>
+    <div class="actions"><button class="btn" id="go">${sel.size ? '攻撃を宣言' : '攻撃しないで確定'}</button></div>`;
+  } else html += read ? readResultHtml() : resultHtml();
+  app.innerHTML = html;
+  bind();
+  if (scrollToLine) { scrollToLine = false; const el = document.getElementById('lineSec'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+}
+
+function firstCast(line, side) { return line.find(e => e.t === 'cast' && e.by === side && e.tg.length); }
+function tgPlain(t) { return t[0] === 'P' ? sideName(t[1]) : NM[t[0]][t[1]]; }
+function insight(you, bests) {
+  const b = bests[0], P = puzzle, msgs = [];
+  const isNaive = !you.cast && P.naiveBest.some(a => sameSet(a, you.attackers));
+  if (you.grade !== 'best') {
+    if (isNaive && P.mode === 'fdn') msgs.push('<b>手札を考えなければ正解に見える手</b>です。');
+    const oc = firstCast(you.line, 1);
+    if (oc) msgs.push(`この攻撃には相手の${cname(oc.c)}が刺さります（→ ${oc.tg.map(tgPlain).join('・')}）。`);
+    if (you.grade === 'loss') msgs.push('相手の最善の反撃で先にライフを削り切られます。攻撃してタップした生物は、相手のターンにブロックできません。');
+    else if (you.grade === 'slow') msgs.push(`勝てますが、最善（${outLabel(b.c)}）より決着が遅くなり、相手に余計な手番を与えます。`);
+    else if (you.grade === 'open') msgs.push('負けはしませんが、より良い攻め方があります。');
+  }
+  const mc = firstCast(b.line, 0);
+  if (b.cast && you.cast !== b.cast) msgs.push(`最善手は、${cname(b.cast)}を戦闘前に唱えて攻撃に加えることです。`);
+  if (mc) msgs.push(`最善の展開では、あなたの${cname(mc.c)}を ${mc.tg.map(tgPlain).join('・')} に使います。`);
+  else if (P.hand[0].length && b.c.cls === 'win') msgs.push(`最善の展開では、あなたの手札は使わずに勝てます（構えておくこと自体が効いています）。`);
+  if (P.best.cls !== 'win') msgs.push('この盤面は勝ち切れないので、「負けない」ことが最優先です。');
+  return msgs.join('');
+}
+function verdictHead(you) {
+  const vc = you.grade === 'best' ? 'v-best' : you.grade === 'slow' ? 'v-slow' : 'v-bad';
+  const big = you.grade === 'best' ? '◎ 正解！' : you.grade === 'slow' ? '○ 惜しい' : you.grade === 'open' ? '△ 不正解' : '× 不正解';
+  return { vc, big };
+}
+function lineSection(title, inner) {
+  return `<div class="sec-title tog" id="lineSec"><span class="lbl">📜 展開：${title}</span><span class="arrow">${lineOpen ? '▲ 閉じる' : '▼ 開く'}</span></div>
+    ${lineOpen ? inner : ''}`;
+}
+function resultHtml() {
+  const P = puzzle;
+  const mine = [...sel].sort((a, b) => a - b);
+  const you = P.opts.find(o => optMatch(o, castSel, mine));
+  const bests = P.opts.filter(o => o.grade === 'best');
+  const { vc, big } = verdictHead(you);
+  const yi = P.opts.indexOf(you), bi = P.opts.indexOf(bests[0]);
+  if (viewIdx < 0) viewIdx = yi;
+  const sorted = P.opts.slice().sort((a, b) => b.value - a.value);
+  const isNaive = o => P.mode === 'fdn' && !o.cast && P.naiveBest.some(a => sameSet(a, o.attackers));
+  const vo = P.opts[viewIdx];
+  return `<div class="result">
+    <div class="verdict ${vc}"><div class="big">${big}</div>
+      <div class="small">あなた：${optLabel(you)} → <b>${outLabel(you.c)}</b><br>
+      AI：${bests.map(optLabel).join(' / ')} → <b>${outLabel(bests[0].c)}</b></div></div>
+    <div class="hint">${insight(you, bests)}</div>
+    <div class="sec-title">🧮 全攻撃パターンの評価 <span style="font-size:11px;color:var(--sub);font-weight:700">（タップで展開を表示）</span></div>
+    <div class="opts">${sorted.map(o => {
+      const i = P.opts.indexOf(o);
+      return `<div class="opt g-${o.grade} ${lineOpen && i === viewIdx ? 'sel' : ''}" data-v="${i}"><span class="mark">${MARK[o.grade]}</span>
+        <span class="atk">${optLabel(o)}${o === you ? '<span class="tag you">あなた</span>' : ''}${o.grade === 'best' ? '<span class="tag ai">AI</span>' : ''}${isNaive(o) && o.grade !== 'best' ? '<span class="tag naive">手札無視なら正解</span>' : ''}</span>
+        <span class="out">${outLabel(o.c)}</span></div>`;
+    }).join('')}</div>
+    <div class="hint">◎最善 ○勝てるが遅い △決着つかず／見劣り ×負け</div>
+    ${lineSection(optLabel(vo), `<div class="tabs">
+      <button data-v="${yi}" class="${viewIdx === yi ? 'on' : ''}">あなたの攻撃</button>
+      <button data-v="${bi}" class="${viewIdx === bi ? 'on' : ''}">AIの最善手</button>
+    </div><div class="line">${lineHtml(vo.line, vo.c)}</div>`)}
+    ${shareHtml()}
+    ${nextButtons()}
+  </div>`;
+}
+function caseSummary(o) {
+  const P = puzzle, g = { win: [], loss: [], open: [] };
+  o.cells.forEach((c, i) => g[c.c.cls].push(scenShort(P.scen[i])));
+  const parts = [];
+  if (g.win.length) parts.push(`${g.win.join('・')}なら<b>勝ち</b>`);
+  if (g.open.length) parts.push(`${g.open.join('・')}なら<b>決着つかず</b>`);
+  if (g.loss.length) parts.push(`${g.loss.join('・')}なら<b>負け</b>`);
+  return parts.join('、');
+}
+const cellCls = c => c.cls === 'win' ? 'w' : c.cls === 'loss' ? 'l' : 'o';
+const cellTxt = c => c.cls === 'win' ? '勝' : c.cls === 'loss' ? '負' : '分';
+function readResultHtml() {
+  const P = puzzle;
+  const mine = [...sel].sort((a, b) => a - b);
+  const you = P.opts.find(o => optMatch(o, castSel, mine));
+  const bests = P.opts.filter(o => o.grade === 'best');
+  const top = P.opts.slice().sort((a, b) => b.ev - a.ev)[0];
+  const { vc, big } = verdictHead(you);
+  const yi = P.opts.indexOf(you);
+  if (!viewCell) {
+    let si = 0;
+    you.cells.forEach((c, i) => { if (c.score < you.cells[si].score) si = i; });
+    viewCell = [yi, si];
+  }
+  const [vo, vs] = viewCell;
+  const sorted = P.opts.slice().sort((a, b) => b.ev - a.ev);
+  let hint = `あなたの攻撃は、相手が${caseSummary(you)}。`;
+  if (you.grade !== 'best') hint += `<br>最善手（${optLabel(top)}）は、${caseSummary(top)}。`;
+  const vopt = P.opts[vo], cell = vopt.cells[vs];
+  return `<div class="result">
+    <div class="verdict ${vc}"><div class="big">${big}</div>
+      <div class="small">あなた：${optLabel(you)} → <b>勝率 ${pct(you.ev)}</b><br>
+      AI：${bests.map(optLabel).join(' / ')} → <b>勝率 ${pct(top.ev)}</b></div></div>
+    <div class="hint">${hint}</div>
+    <div class="sec-title">🧮 場合分け <span style="font-size:11px;color:var(--sub);font-weight:700">（マスをタップで展開を表示）</span></div>
+    <table class="mtx"><thead><tr><th style="text-align:left">攻撃</th>${P.scen.map(h => `<th>${h ? cshort(h) : '基本土地'}</th>`).join('')}<th>勝率</th></tr></thead>
+    <tbody>${sorted.map(o => {
+      const oi = P.opts.indexOf(o);
+      return `<tr class="${o === you ? 'you' : ''}"><td><span class="mk" style="color:${o.grade === 'best' ? 'var(--good)' : o.grade === 'slow' ? 'var(--warn)' : 'var(--bad)'}">${MARK[o.grade]}</span>${optShort(o)}${o === you ? '<span class="tag you">あなた</span>' : ''}</td>${o.cells.map((c, si) => `<td><span class="cell ${cellCls(c.c)} ${lineOpen && oi === vo && si === vs ? 'sel' : ''}" data-cell="${oi},${si}">${cellTxt(c.c)}${c.c.n ? `<small>${c.c.mine ? '自' : '敵'}${c.c.n}T</small>` : ''}</span></td>`).join('')}<td>${pct(o.ev)}</td></tr>`;
+    }).join('')}</tbody></table>
+    <div class="hint">◎最善（勝率の差5%以内） ○惜しい（15%以内） ×不正解／勝＝勝ち 負＝負け 分＝決着つかず（小さい数字は決着するターン）</div>
+    ${lineSection(`${optLabel(vopt)} × 相手が${scenShort(P.scen[vs])}`, `<div class="line">${lineHtml(cell.line, cell.c)}</div>`)}
+    ${shareHtml()}
+    ${nextButtons()}
+  </div>`;
+}
+function nextButtons() {
+  const label = reviewing ? (review.length ? '次の復習 →' : '復習を終える') : '次の問題 →';
+  return `<div class="actions"><button class="btn sec" id="retry">解き直す</button><button class="btn" id="next">${label}</button></div>`;
+}
+
+// ---------- 共有 ----------
+function shareHtml() {
+  return `<div class="share"><div class="sid">問題ID：<code>${puzzle.id}</code></div>
+    <div class="sbtns"><button data-copy="link">🔗 リンク</button><button data-copy="q">📋 問題文</button><button data-copy="qa">📋 答え付き</button></div>
+    <div class="sid" style="margin-top:6px">リンクは、このアプリを共有した相手が開けます（問題IDから同じ盤面を復元）</div>
+    <div id="copyArea"></div></div>`;
+}
+function puzzleText(withAnswer) {
+  const P = puzzle;
+  const crLine = side => (side ? P.board.op : P.board.me).map((c, i) => `${NM[side][i]} ${c.p}/${c.t}${kwList(c).length ? ' ' + kwList(c).join('・') : ''}${side === 1 && (P.tapped >> i & 1) ? '（タップ中）' : ''}`).join('　');
+  const handTxt = side => P.mode === 'basic' ? '' : (side === 1 && P.mode === 'read')
+    ? ` 土地${P.lands[1]} 手札1枚（${P.scen.map(scenShort).join('／')} のどれか・均等）`
+    : ` 土地${P.lands[side]} 手札${P.hand[side].length ? P.hand[side].length + '枚 ' + P.hand[side].map(cname).join('・') : '0枚'}`;
+  const L = [`【コンバットドリル】${MODE_JA[P.mode]}・${LEVEL_JA[P.level]}`,
+    `相手 ライフ${P.life[1]}${handTxt(1)}`, `　${crLine(1)}`,
+    `あなた ライフ${P.life[0]}${handTxt(0)}`, `　${crLine(0)}`,
+    'Q. どの生物で攻撃する？（あなたのターン・戦闘フェイズ）'];
+  if (withAnswer) {
+    const bests = P.opts.filter(o => o.grade === 'best');
+    if (P.mode === 'read') {
+      const top = P.opts.slice().sort((a, b) => b.ev - a.ev)[0];
+      L.push('', `A. ${bests.map(optLabel).join(' / ')}（勝率${pct(top.ev)}）`);
+      L.push(`　${caseSummary(top).replace(/<[^>]+>/g, '')}`);
+    } else L.push('', `A. ${bests.map(optLabel).join(' / ')} → ${outLabel(bests[0].c)}`);
+  }
+  L.push(`${ART_URL}#${P.id}`);
+  return L.join('\n');
+}
+function copyText(text) {
+  const fallback = () => {
+    const a = document.getElementById('copyArea');
+    if (a) { a.innerHTML = `<textarea class="copybox" readonly></textarea><div class="sid">自動コピーできなかったので、上の文字を長押しでコピーしてください</div>`; const ta = a.querySelector('textarea'); ta.value = text; ta.focus(); ta.select(); }
+  };
+  try { navigator.clipboard.writeText(text).then(() => toast('コピーしました'), fallback); } catch (e) { fallback(); }
+}
+let toastT = 0;
+function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 1800); }
+
+// ---------- 成績 ----------
+function showStats() {
+  rk.open = false;
+  const cell = s => s.n ? `${Math.round(s.best / s.n * 100)}%<small>${s.best}/${s.n}</small>` : '—';
+  const sum = m => LEVELS.reduce((a, l) => ({ n: a.n + stats[m][l].n, best: a.best + stats[m][l].best }), { n: 0, best: 0 });
+  document.getElementById('sheet').innerHTML = `<h2>📊 成績（正解率）</h2>
+    <table class="stbl"><tr><th></th>${LEVELS.map(l => `<th>${LEVEL_JA[l]}</th>`).join('')}<th>合計</th></tr>
+    ${MODES.map(m => `<tr><td>${MODE_JA[m]}</td>${LEVELS.map(l => `<td>${cell(stats[m][l])}</td>`).join('')}<td>${cell(sum(m))}</td></tr>`).join('')}</table>
+    <div class="hint">復習待ち：<b>${review.length}</b>問（間違えた問題がたまり、復習で正解すると消えます）。復習中の解答は成績に含めません。</div>
+    <button class="btn sec close" id="closeModal">閉じる</button>`;
+  document.getElementById('modal').classList.add('show');
+  document.getElementById('closeModal').onclick = () => document.getElementById('modal').classList.remove('show');
+}
+// ---------- ランキング（共有DB：ranking/<ユーザーID>） ----------
+const rk = { db: null, user: null, uid: null, rows: [], state: 'init', blocked: false, writing: false, dirty: false, names: {}, isOwner: false, tab: 'read', armed: null, open: false };
+const clampN = v => { const n = Math.floor(Number(v)); return Number.isFinite(n) && n > 0 ? Math.min(n, 9999) : 0; };
+function sanitizeRow(id, d) {
+  const r = { id, name: typeof d.name === 'string' ? d.name.slice(0, 16) : '' };
+  MODES.forEach(m => { r[m] = clampN(d[m]); r[m + 'At'] = typeof d[m + 'At'] === 'string' ? d[m + 'At'].slice(0, 12) : ''; });
+  return r;
+}
+let rkInit = null;
+const ensureRanking = () => rkInit || (rkInit = initRanking());
+async function initRanking() {
+  let cl = window.claude;
+  if ((!cl || typeof cl.use !== 'function') && window.__claudePromise) cl = await window.__claudePromise;
+  if (!cl || typeof cl.use !== 'function') { rk.state = 'off'; refreshRanking(); return; }
+  try {
+    const [db, user] = await Promise.all([cl.use('db'), cl.use('user')]);
+    if (!db) { rk.state = 'off'; refreshRanking(); return; }
+    rk.db = db; rk.user = user;
+    if (user) {
+      try { rk.uid = await user.id(); } catch (e) { rk.uid = null; }
+      try { rk.isOwner = !!(await user.isOwner()); } catch (e) {}
+      try { const c = await user.can('data.write'); if (c === false) rk.blocked = true; } catch (e) {}
+    }
+    rk.needLogin = HOSTED && !rk.uid;
+    if (HOSTED && window.__auth) { try { const c = await window.__auth.current(); rk.gname = c ? c.name : ''; } catch (e) {} }
+    if (!rk.uid && !HOSTED) rk.blocked = true;
+    rk.state = 'loading'; refreshRanking();
+    const timer = setTimeout(() => { if (rk.state === 'loading') { rk.state = 'timeout'; refreshRanking(); } }, 10000);
+    rk.unsub = db.collection('ranking').onSnapshot(snap => {
+      rk.rows = snap.docs.filter(d => d.exists).map(d => sanitizeRow(d.id, d.data() || {}));
+      if (!snap.metadata.fromCache) { clearTimeout(timer); rk.state = 'ready'; if (rk.pendingPush) { rk.pendingPush = false; setTimeout(pushMine, 0); } }
+      resolveNames(); refreshRanking();
+    }, () => { clearTimeout(timer); rk.state = 'off'; refreshRanking(); });
+  } catch (e) { rk.state = 'off'; refreshRanking(); }
+}
+async function resolveNames() {
+  if (!rk.user || typeof rk.user.profiles !== 'function') return;
+  const ids = rk.rows.filter(r => !r.name).map(r => r.id);
+  if (!ids.length) return;
+  try { const ps = await rk.user.profiles(ids); ids.forEach(id => { rk.names[id] = (ps && ps[id] && ps[id].name) || ''; }); refreshRanking(); } catch (e) {}
+}
+const myRow = () => rk.rows.find(r => r.id === rk.uid);
+const myBest = m => Math.max(bestRec[m].best, (myRow() || {})[m] || 0);
+// 自分の記録をランキングへ（ユーザー操作や記録更新のときだけ呼ぶ。1文書1書き込みずつ）
+async function pushMine() {
+  if (!rk.db || !rk.uid || rk.blocked || rk.state === 'off') return;
+  if (rk.state !== 'ready') { rk.pendingPush = true; return; }   // 自分の既存記録を読んでから書く
+  if (rk.writing) { rk.dirty = true; return; }
+  const mine = myRow();
+  const body = { name: playerName.slice(0, 16) };
+  let changed = !mine || (mine.name || '') !== body.name;
+  MODES.forEach(m => {
+    const remote = mine ? mine[m] : 0, local = bestRec[m].best;
+    body[m] = Math.max(remote, local);
+    body[m + 'At'] = local > remote ? bestRec[m].date : (mine ? mine[m + 'At'] : '') || bestRec[m].date || '';
+    if (body[m] !== remote) changed = true;
+  });
+  if (!changed || !MODES.some(m => body[m] > 0)) return;
+  rk.writing = true;
+  try { await rk.db.collection('ranking').doc(rk.uid).set(body); }
+  catch (e) {
+    const code = e && e.code;
+    if (code === 'unavailable') setTimeout(pushMine, 1200 + Math.random() * 1200);
+    else { rk.blocked = true; if (code === 'quota_exceeded') toast('ランキングの保存容量がいっぱいです'); }
+  }
+  rk.writing = false;
+  if (rk.dirty) { rk.dirty = false; pushMine(); }
+  refreshRanking();
+}
+function rankListHtml() {
+  const m = rk.tab;
+  if (rk.state === 'init') return '<div class="rkst">読み込み中…</div>';
+  if (rk.state === 'off') return HOSTED ? '<div class="rkst warn">ランキングに接続できません。通信状況を確認して、ページを再読み込みしてください。</div>' : `<div class="rkst warn">ランキングに接続できません。claude.aiにサインインした状態で、共有されたこのアプリを開くと表示されます。</div>`;
+  const rows = rk.rows.filter(r => r[m] > 0).sort((a, b) => b[m] - a[m] || (a[m + 'At'] || '').localeCompare(b[m + 'At'] || '')).slice(0, 50);
+  let h = rk.state === 'loading' ? '<div class="rkst">読み込み中…</div>' : rk.state === 'timeout' ? '<div class="rkst warn">ランキングをまだ読み込めていません（表示が古い可能性があります）</div>' : '';
+  if (!rows.length) return h + '<div class="rkst">まだ記録がありません。最初の1人になろう！</div>';
+  let rank = 0, prev = null;
+  h += '<ol class="rk">' + rows.map((r, i) => {
+    if (r[m] !== prev) { rank = i + 1; prev = r[m]; }
+    const name = r.name || rk.names[r.id] || 'プレイヤー';
+    const del = rk.isOwner ? `<button class="del ${rk.armed === r.id ? 'arm' : ''}" data-del="${esc(r.id)}">${rk.armed === r.id ? '削除する' : '×'}</button>` : '';
+    return `<li class="${r.id === rk.uid ? 'me' : ''}"><span class="n">${rank}</span><span class="nm2">${esc(name)}${r.id === rk.uid ? '（あなた）' : ''}<small>${esc(r[m + 'At'] || '')}</small></span><span class="v">${r[m]}<small>問</small></span>${del}</li>`;
+  }).join('') + '</ol>';
+  return h;
+}
+function rankingHtml() {
+  const m = rk.tab;
+  const mine = myRow();
+  const regNote = (HOSTED && rk.needLogin && rk.state !== 'off')
+    ? `<div class="login"><button class="gbtn" id="gLogin">Googleでログインしてランキングに参加</button>
+       <div class="rkst" style="margin:8px 0 0">ランキングを見るだけならログイン不要です。ログインすると記録が自動で登録され、別の端末でも同じ記録で続けられます（Googleの名前やメールアドレスは公開されません。表示されるのはプレイヤー名だけです）。<br>※Xなどのアプリ内ブラウザではログインできないことがあります。その場合はSafariやChromeで開いてください。</div></div>`
+    : rk.blocked
+    ? (HOSTED ? '<div class="rkst warn">記録をランキングに登録できませんでした。ページを再読み込みしてもう一度お試しください。</div>'
+      : '<div class="rkst warn">このアカウントは閲覧のみの権限のため、記録をランキングに登録できません（参加するには、アプリのオーナーからメールで招待してもらう必要があります）。</div>')
+    : (!mine && rk.state === 'ready' && MODES.some(x => bestRec[x].best > 0) ? '<div class="rkst">プレイヤー名を入れて「登録」を押すと、ランキングに載ります。</div>' : '');
+  return `<h2>🏆 ランキング（むずかしい・最高連続正解）</h2>
+    <div class="rktabs">${MODES.map(x => `<button data-rk="${x}" class="${x === m ? 'on' : ''}">${MODE_JA[x]}</button>`).join('')}</div>
+    <div id="rkList">${rankListHtml()}</div>
+    <div class="rkme">あなた（${MODE_JA[m]}・むずかしい）：自己ベスト <b>${myBest(m)}</b>問　現在の連続 ${stats[m].hard.streak}問</div>
+    <div class="pname">プレイヤー名<input id="pname" maxlength="16" placeholder="ランキングに表示する名前" value="${esc(playerName)}"><button id="pnameSave">登録</button></div>
+    ${regNote}
+    ${HOSTED && rk.uid ? `<div class="rkst">ログイン中${rk.gname ? '：' + esc(rk.gname) + '（あなたにだけ表示）' : ''}<button class="linkbtn" id="gLogout">ログアウト</button></div>` : ''}
+    <div class="hint">・「むずかしい」で出題された問題を、続けて何問正解できたかの自己ベストで競います（記録は自動で更新）<br>
+    ・復習やリンクから開いた問題は対象外。未回答のまま他へ移っても、次に同じモードの「むずかしい」を開くと<b>同じ問題から再開</b>します</div>
+    <button class="btn sec close" id="closeModal">閉じる</button>`;
+}
+function bindRanking() {
+  const close = document.getElementById('closeModal');
+  if (close) close.onclick = () => { rk.open = false; document.getElementById('modal').classList.remove('show'); };
+  document.querySelectorAll('[data-rk]').forEach(b => b.onclick = () => { rk.tab = b.dataset.rk; showRanking(true); });
+  const save = document.getElementById('pnameSave'), inp = document.getElementById('pname');
+  if (save) save.onclick = async () => {
+    playerName = inp.value.trim().slice(0, 16); store.set('cd_name', playerName);
+    if (HOSTED && rk.needLogin) { toast('名前を保存しました。Googleでログインするとランキングに載ります'); return; }
+    await pushMine(); toast(rk.blocked ? '名前を保存しました（ランキングには登録できません）' : 'ランキングに登録しました'); showRanking(true);
+  };
+  const gl = document.getElementById('gLogin');
+  if (gl) gl.onclick = async () => {
+    try { await window.__auth.signIn(); }
+    catch (e) {
+      const c = (e && e.code) || '';
+      toast(c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request' ? 'ログインをキャンセルしました'
+        : c === 'auth/popup-blocked' ? 'ポップアップがブロックされました。許可してからもう一度押してください'
+        : 'ログインできませんでした。SafariやChromeで開いてお試しください');
+      return;
+    }
+    await restartRanking(); toast('ログインしました'); pushMine(); showRanking(true);
+  };
+  const lo = document.getElementById('gLogout');
+  if (lo) lo.onclick = async () => { try { await window.__auth.signOut(); } catch (e) {} await restartRanking(); toast('ログアウトしました'); showRanking(true); };
+  bindDel();
+}
+async function restartRanking() {
+  if (rk.unsub) { try { rk.unsub(); } catch (e) {} rk.unsub = null; }
+  Object.assign(rk, { uid: null, rows: [], state: 'init', blocked: false, needLogin: false, pendingPush: false, writing: false, dirty: false, gname: '' });
+  rkInit = null;
+  await ensureRanking();
+}
+function bindDel() {
+  document.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    const id = b.dataset.del;
+    if (rk.armed !== id) { rk.armed = id; refreshRanking(); return; }
+    rk.armed = null;
+    try { await rk.db.collection('ranking').doc(id).delete(); toast('削除しました'); } catch (e) { toast('削除できませんでした'); }
+  });
+}
+function showRanking(keep) {
+  rk.open = true;
+  if (!keep) { rk.tab = mode; ensureRanking().then(pushMine); }
+  document.getElementById('sheet').innerHTML = rankingHtml();
+  document.getElementById('modal').classList.add('show');
+  bindRanking();
+}
+function refreshRanking() {
+  if (!rk.open) return;
+  const el = document.getElementById('rkList');
+  if (el) { el.innerHTML = rankListHtml(); bindDel(); }
+}
+document.getElementById('modal').onclick = e => { if (e.target.id === 'modal') { rk.open = false; e.currentTarget.classList.remove('show'); } };
+
+// ---------- events ----------
+function bind() {
+  const on = (id, f) => { const el = document.getElementById(id); if (el) el.onclick = f; };
+  on('prem', () => { showPremise = !showPremise; render(); });
+  on('revStop', stopReview);
+  document.querySelectorAll('[data-card]').forEach(el => el.onclick = () => { const s = el.dataset.card; showCard = showCard === s ? -1 : s; render(); });
+  document.querySelectorAll('[data-cand]').forEach(el => el.onclick = () => { const s = 'c' + el.dataset.cand; showCard = showCard === s ? -1 : s; render(); });
+  if (!answered) {
+    document.querySelectorAll('#merow .card').forEach(el => { el.onclick = () => {
+      const i = +el.dataset.i;
+      if (i < puzzle.board.me.length && puzzle.board.me[i].df) { toast('防衛を持つクリーチャーは攻撃できません'); return; }
+      sel.has(i) ? sel.delete(i) : sel.add(i); render(); }; });
+    on('castBtn', () => { if (castSel) { sel.delete(slotOf(castSel)); castSel = null; } else castSel = hasteInHand(); render(); });
+    on('go', submit);
+    return;
+  }
+  document.querySelectorAll('[data-v]').forEach(el => el.onclick = () => { viewIdx = +el.dataset.v; lineOpen = true; scrollToLine = true; render(); });
+  document.querySelectorAll('[data-cell]').forEach(el => el.onclick = () => { viewCell = el.dataset.cell.split(',').map(Number); lineOpen = true; scrollToLine = true; render(); });
+  on('lineSec', () => { lineOpen = !lineOpen; render(); });
+  document.querySelectorAll('[data-copy]').forEach(el => el.onclick = () => {
+    const t = el.dataset.copy;
+    copyText(t === 'link' ? `${ART_URL}#${puzzle.id}` : puzzleText(t === 'qa'));
+  });
+  on('next', () => {
+    window.scrollTo(0, 0);
+    if (reviewing) { if (review.length) loadId(review[0].id); else { reviewing = false; toast('復習完了！'); newPuzzle(); } }
+    else newPuzzle();
+  });
+  on('retry', () => { answered = false; sel = new Set(); castSel = null; viewIdx = -1; viewCell = null; lineOpen = false; render(); });
+}
+
+function submit() {
+  const mine = [...sel].sort((a, b) => a - b);
+  const you = puzzle.opts.find(o => optMatch(o, castSel, mine));
+  if (!you) { toast('その組み合わせは選べません'); return; }
+  if (!puzzle.scored) {
+    puzzle.scored = true;
+    const ok = you.grade === 'best';
+    if (reviewing) {
+      const idx = review.findIndex(r => r.id === puzzle.id);
+      if (idx >= 0) { const [it] = review.splice(idx, 1); if (!ok) review.push(it); }
+      saveReview();
+    } else {
+      if (puzzle.fresh) {
+        const st = stats[puzzle.mode][puzzle.level];
+        st.n++;
+        if (ok) { st.best++; st.streak++; st.top = Math.max(st.top, st.streak); }
+        else { if (you.grade === 'slow') st.slow++; st.streak = 0; }
+        store.set('cd_stats3', stats);
+        if (puzzle.level === 'hard') {
+          if (pending[puzzle.mode] === puzzle.id) { delete pending[puzzle.mode]; store.set('cd_pending', pending); }
+          const br = bestRec[puzzle.mode];
+          if (ok && st.streak > br.best) {
+            br.best = st.streak; const d = new Date(); br.date = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
+            store.set('cd_best', bestRec);
+            setTimeout(() => toast(`🏆 自己ベスト更新！ ${MODE_JA[puzzle.mode]}・むずかしい 連続${br.best}問`), 400);
+            ensureRanking().then(pushMine);
+          }
+        }
+      }
+      if (!ok && !review.some(r => r.id === puzzle.id)) { review.push({ id: puzzle.id }); if (review.length > 100) review.shift(); saveReview(); }
+      renderScore();
+    }
+  }
+  answered = true; viewIdx = -1; viewCell = null; lineOpen = false;
+  if (curRec.id === puzzle.id) { curRec.answered = true; store.set('cd_cur', curRec); }
+  render();
+  const r = document.querySelector('.result');
+  if (r) r.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderScore() {
+  const st = stats[mode][level];
+  const p = st.n ? Math.round(st.best / st.n * 100) : 0;
+  const extra = level === 'hard' ? `・ベスト <b>${myBest(mode)}</b>` : '';
+  document.getElementById('score').innerHTML = `${MODE_JA[mode]}・${LEVEL_JA[level]}<br>正解 <b>${st.best}</b>/${st.n}（${p}%）連続 <b>${st.streak}</b>${extra}`;
+}
+function renderSeg() {
+  document.querySelectorAll('#levels button').forEach(b => {
+    b.classList.toggle('on', b.dataset.lv === level);
+    b.onclick = () => { if (level === b.dataset.lv && !reviewing) return; reviewing = false; level = b.dataset.lv; store.set('cd_level', level); renderSeg(); renderScore(); newPuzzle(); };
+  });
+  document.querySelectorAll('#modes button').forEach(b => {
+    b.classList.toggle('on', b.dataset.m === mode);
+    b.onclick = () => { if (mode === b.dataset.m && !reviewing) return; reviewing = false; mode = b.dataset.m; store.set('cd_mode', mode); renderSeg(); renderScore(); newPuzzle(); };
+  });
+}
+document.getElementById('reset').onclick = () => { MODES.forEach(m => LEVELS.forEach(l => { stats[m][l] = emptyStats(); })); store.set('cd_stats3', stats); renderScore(); toast('成績をリセットしました（連続正解の自己ベストは残ります）'); };
+document.getElementById('revBtn').onclick = startReview;
+document.getElementById('statBtn').onclick = showStats;
+document.getElementById('recBtn').onclick = () => showRanking(false);
+window.addEventListener('hashchange', () => {
+  const h = (location.hash || '').slice(1);
+  if (h && (!puzzle || h !== puzzle.id)) loadId(h);
+});
+
+window.__cd = { get puzzle() { return puzzle; }, encode, decode };
+renderSeg(); renderScore(); saveReview();
+if (!HOSTED) ensureRanking();
+const h0 = (location.hash || '').slice(1);
+if (h0 && decode(h0)) loadId(h0); else newPuzzle();
+})();
+</script>
+</body>
+</html>
