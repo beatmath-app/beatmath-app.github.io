@@ -636,7 +636,7 @@ function advance(s, ev, maxPly) {
 let vanillaHook = null;
 let disableVanilla = false;   // テスト用：基本用エンジンへの切り替えを止める
 let deadline = 0; const ABORT = { abort: true };
-let trickPly = 4; // このターン数以降は手札を無視したバニラ探索で近似
+let trickPly = 10; // このターン数以降は手札を無視したバニラ探索で近似（各難易度で maxPly と同じにして、常にインスタントを考慮）
 const vanillaCache = new Map();
 function vanillaSides(s) {
   return [0, 1].map(side => s.cr[side].map(c => Object.assign({}, c.k, { p: Math.max(0, c.p + c.ctr), t: c.t + c.ctr, fly: c.fly, reach: c.reach })));
@@ -889,9 +889,9 @@ function gradeOptions(opts) {
 }
 
 const LEVELS = {
-  easy:   { me: [1, 2], op: [1, 2], life: [2, 7],  flyP: 0.2, tapP: 0.15, handP: [0.5, 0.8], creatureP: [0.2, 0.25], kwP: 0.25, kwMax: 1, maxPly: 10, trickPly: 4 },
-  normal: { me: [2, 3], op: [1, 2], life: [2, 9],  flyP: 0.2, tapP: 0.2,  handP: [0.7, 0.8], creatureP: [0.3, 0.3],  kwP: 0.4,  kwMax: 2, maxPly: 10, trickPly: 4, swap: true },
-  hard:   { me: [2, 3], op: [2, 3], life: [3, 10], flyP: 0.2, tapP: 0.25, handP: [0.8, 0.8], creatureP: [0.35, 0.3], kwP: 0.5,  kwMax: 2, maxPly: 10, trickPly: 4, maxTotal: 5 },
+  easy:   { me: [1, 2], op: [1, 2], life: [2, 7],  flyP: 0.2, tapP: 0.15, handP: [0.5, 0.8], creatureP: [0.2, 0.25], kwP: 0.25, kwMax: 1, maxPly: 10, trickPly: 10 },
+  normal: { me: [2, 3], op: [1, 2], life: [2, 9],  flyP: 0.2, tapP: 0.2,  handP: [0.7, 0.8], creatureP: [0.3, 0.3],  kwP: 0.4,  kwMax: 2, maxPly: 10, trickPly: 10, swap: true },
+  hard:   { me: [2, 3], op: [2, 3], life: [3, 10], flyP: 0.2, tapP: 0.25, handP: [0.8, 0.8], creatureP: [0.35, 0.3], kwP: 0.5,  kwMax: 2, maxPly: 10, trickPly: 10, maxTotal: 5 },
 };
 function rint(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
 function randCreature(flyP, kwP = 0, kwMax = 0) {
@@ -916,7 +916,7 @@ function instCost(id) { return CARDS[id].cost; }
 
 // ---------- 解く（フィルタなし。問題IDからの復元にも使う） ----------
 // spec: { level, board, life, tapped, hand:[[ids],[ids]], lands, hc:[手札クリーチャー定義], scen? }
-function solveFdn(spec) {
+function solveFdn(spec, tp) {
   vanillaCache.clear();
   const L = LEVELS[spec.level];
   const { board, life, hand, lands, tapped } = spec;
@@ -927,7 +927,7 @@ function solveFdn(spec) {
   const naive = vs.rootOptions(st);
   const nbest = Math.max(...naive.map(o => o.value));
   const naiveBest = naive.filter(o => o.value === nbest).map(o => o.attackers);
-  const opts = rootOptions(board, life, hand, lands, tapped, L.maxPly, L.trickPly, hc).opts;
+  const opts = rootOptions(board, life, hand, lands, tapped, L.maxPly, tp || L.trickPly, hc).opts;
   const bc = gradeOptions(opts);
   return {
     mode: 'fdn', level: spec.level, board, life, hand, lands, tapped, hc, maxPly: L.maxPly, best: bc, naiveBest,
@@ -935,14 +935,14 @@ function solveFdn(spec) {
   };
 }
 
-function solveRead(spec) {
+function solveRead(spec, tp) {
   vanillaCache.clear();
   const L = READ_LEVELS[spec.level];
   const { board, life, hand, lands, tapped, scen } = spec;
   const hc = spec.hc || [];
   const probs = scen.map(() => 100 / scen.length); // 候補は均等確率
   const per = scen.map(h => {
-    const { opts } = rootOptions(board, life, [hand[0], h ? [h] : []], lands, tapped, L.maxPly, L.trickPly, hc);
+    const { opts } = rootOptions(board, life, [hand[0], h ? [h] : []], lands, tapped, L.maxPly, tp || L.trickPly, hc);
     gradeOptions(opts);
     return opts;
   });
@@ -1010,17 +1010,25 @@ function tryPuzzle(levelName) {
   }
   if (!mine.hand.length && !opHand.length) return null;
   const life = [rint(L.life[0], L.life[1]), rint(L.life[0], L.life[1])];
-  let p;
-  deadline = Date.now() + 15000;
-  try { p = solveFdn({ level: levelName, board, life, hand: [mine.hand, opHand], lands: [mine.lands, opLands], tapped, hc }); }
-  catch (e) { if (e === ABORT) return null; throw e; } finally { deadline = 0; }
+  const spec = { level: levelName, board, life, hand: [mine.hand, opHand], lands: [mine.lands, opLands], tapped, hc };
+  // まず手札を4ターンだけ考える速い探索でふるいにかけ、通ったものだけ10ターン全部インスタントを考えて解き直す
+  for (const tp of [PRE_TRICK, 0]) {
+    let p;
+    deadline = Date.now() + (tp ? 15000 : 30000);
+    try { p = solveFdn(spec, tp); }
+    catch (e) { if (e === ABORT) return null; throw e; } finally { deadline = 0; }
+    if (!fdnOK(p)) return null;
+    if (!tp) return p;
+  }
+}
+const PRE_TRICK = 4;
+function fdnOK(p) {
   const opts = p.opts;
-  if (opts.length < 2 || p.best.cls === 'loss') return null;
-  if (opts.filter(o => o.grade === 'best').length / opts.length > 0.5) return null;
+  if (opts.length < 2 || p.best.cls === 'loss') return false;
+  if (opts.filter(o => o.grade === 'best').length / opts.length > 0.5) return false;
   // 手札を無視した答えが間違いになる問題だけ
   const nb = p.naiveBest.map(a => a.join());
-  if (!opts.some(o => !o.cast && nb.includes(o.attackers.join()) && o.grade !== 'best')) return null;
-  return p;
+  return opts.some(o => !o.cast && nb.includes(o.attackers.join()) && o.grade !== 'best');
 }
 
 function generate(levelName, budgetMs = 20000) {
@@ -1031,9 +1039,9 @@ function generate(levelName, budgetMs = 20000) {
 
 // ---------- 読みモード（相手の手札1枚が候補のどれか・均等） ----------
 const READ_LEVELS = {
-  easy:   { me: [2, 2], op: [1, 2], life: [2, 8],  flyP: 0.2, tapP: 0.15, handP: [0.35, 0], creatureP: [0.2, 0.25], kwP: 0.25, kwMax: 1, nCards: 1, maxPly: 10, trickPly: 4 },
-  normal: { me: [2, 3], op: [1, 2], life: [2, 9],  flyP: 0.2, tapP: 0.2,  handP: [0.5, 0],  creatureP: [0.25, 0.3], kwP: 0.4,  kwMax: 2, nCards: 2, maxPly: 10, trickPly: 4, swap: true },
-  hard:   { me: [2, 3], op: [2, 3], life: [3, 10], flyP: 0.2, tapP: 0.25, handP: [0.5, 0],  creatureP: [0.3, 0.3],  kwP: 0.5,  kwMax: 2, nCards: 3, maxPly: 10, trickPly: 4, maxTotal: 5 },
+  easy:   { me: [2, 2], op: [1, 2], life: [2, 8],  flyP: 0.2, tapP: 0.15, handP: [0.35, 0], creatureP: [0.2, 0.25], kwP: 0.25, kwMax: 1, nCards: 1, maxPly: 10, trickPly: 10 },
+  normal: { me: [2, 3], op: [1, 2], life: [2, 9],  flyP: 0.2, tapP: 0.2,  handP: [0.5, 0],  creatureP: [0.25, 0.3], kwP: 0.4,  kwMax: 2, nCards: 2, maxPly: 10, trickPly: 10, swap: true },
+  hard:   { me: [2, 3], op: [2, 3], life: [3, 10], flyP: 0.2, tapP: 0.25, handP: [0.5, 0],  creatureP: [0.3, 0.3],  kwP: 0.5,  kwMax: 2, nCards: 3, maxPly: 10, trickPly: 10, maxTotal: 5 },
 };
 function scoreOf(c) { return c.cls === 'win' ? 1 : c.cls === 'loss' ? 0 : 0.5; }
 
@@ -1062,19 +1070,25 @@ function tryRead(levelName) {
   }
   if (cards.length < L.nCards) return null;
   const scen = cards.concat([null]);
-  let p;
-  deadline = Date.now() + 25000;
-  try { p = solveRead({ level: levelName, board, life, tapped, hand: [mine.hand, []], lands: [mine.lands, opLands], scen, hc }); }
-  catch (e) { if (e === ABORT) return null; throw e; } finally { deadline = 0; }
+  const spec = { level: levelName, board, life, tapped, hand: [mine.hand, []], lands: [mine.lands, opLands], scen, hc };
+  for (const tp of [PRE_TRICK, 0]) {
+    let p;
+    deadline = Date.now() + (tp ? 25000 : 60000);
+    try { p = solveRead(spec, tp); }
+    catch (e) { if (e === ABORT) return null; throw e; } finally { deadline = 0; }
+    if (!readOK(p, scen)) return null;
+    if (!tp) return p;
+  }
+}
+function readOK(p, scen) {
   const options = p.opts;
-  if (options.length < 2) return null;
+  if (options.length < 2) return false;
   const evs = options.map(o => o.ev), maxEv = Math.max(...evs), minEv = Math.min(...evs);
-  if (maxEv < 0.3 || maxEv - minEv < 0.25) return null;
+  if (maxEv < 0.3 || maxEv - minEv < 0.25) return false;
   // 候補ごとに「結果が最善の手」が割れていること（全候補で最善になる手がない）
   const bestSets = scen.map((_, i) => { const m = Math.max(...options.map(o => o.cells[i].score)); return new Set(options.filter(o => o.cells[i].score === m).map(optKey)); });
-  if (options.some(o => bestSets.every(s => s.has(optKey(o))))) return null;
-  if (options.filter(o => o.grade === 'best').length / options.length > 0.5) return null;
-  return p;
+  if (options.some(o => bestSets.every(s => s.has(optKey(o))))) return false;
+  return options.filter(o => o.grade === 'best').length / options.length <= 0.5;
 }
 function generateRead(levelName, budgetMs = 30000) {
   const t0 = Date.now(); let tries = 0;
@@ -1082,4 +1096,4 @@ function generateRead(levelName, budgetMs = 30000) {
   return null;
 }
 
-if (typeof module !== 'undefined') module.exports = { CARDS, CARD_IDS, makeSolver, initialState, advance, rootOptions, WIN, P, T, classify, gradeOptions, generate, generateRead, solveFdn, solveRead, LEVELS, READ_LEVELS, _t: { resolveSpell, castOptions, combatDamage, sba, clone, newCreature, setHandCreatures, makeVanilla, ccCombat, setNoVanilla: v => { disableVanilla = v; } } };
+if (typeof module !== 'undefined') module.exports = { CARDS, CARD_IDS, makeSolver, initialState, advance, rootOptions, WIN, P, T, classify, gradeOptions, generate, generateRead, solveFdn, solveRead, LEVELS, READ_LEVELS, _t: { resolveSpell, castOptions, combatDamage, sba, clone, newCreature, setHandCreatures, makeVanilla, ccCombat, setNoVanilla: v => { disableVanilla = v; }, readOK, fdnOK } };

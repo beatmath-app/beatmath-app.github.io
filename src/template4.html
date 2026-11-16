@@ -189,7 +189,7 @@ self.onmessage = function(e){
   try {
     if (type === 'solve') {
       p = mode === 'fdn' ? V2.solveFdn(spec) : mode === 'read' ? V2.solveRead(spec) : solveBasic(spec);
-    } else if (mode === 'fdn') p = V2.generate(level, 30000);
+    } else if (mode === 'fdn') p = V2.generate(level, 60000);
     else if (mode === 'read') p = V2.generateRead(level, 120000);
     else { const q = V1.generate(level, 20000); if (q) p = basicPuzzle(level, q.board, q.st, q.maxPly, q.opts); }
   } catch (err) { p = null; }
@@ -225,7 +225,8 @@ let stats = store.get('cd_stats3', {});
 MODES.forEach(m => { stats[m] = stats[m] || {}; LEVELS.forEach(l => { stats[m][l] = stats[m][l] || emptyStats(); }); });
 let review = store.get('cd_review', []);
 let BANK = {}; try { BANK = JSON.parse(document.getElementById('bank').textContent); } catch (e) { BANK = {}; }
-let seen = store.get('cd_seen_read', { easy: [], normal: [], hard: [] });
+// 解いた同梱問題は問題IDで記録（問題集を差し替えても番号がずれないように。旧版の番号での記録 cd_seen_read は使わない）
+let seen = store.get('cd_seen_read2', { easy: [], normal: [], hard: [] });
 let pending = store.get('cd_pending', {});           // むずかしいの未回答問題（モードごと）→ 再開用
 let bestRec = store.get('cd_best', {});              // むずかしいの自己ベスト連続正解
 MODES.forEach(m => { bestRec[m] = bestRec[m] || { best: 0, date: '' }; });
@@ -320,10 +321,11 @@ function k(m, l) { return m + ':' + l; }
 function prefetch(m, l) { if (m !== 'read' && !next[k(m, l)]) next[k(m, l)] = call({ type: 'gen', mode: m, level: l }); }
 function fromBank(l) {
   const list = BANK[l] || [];
-  const unseen = list.map((_, i) => i).filter(i => !seen[l].includes(i));
+  const idOf = i => encode(Object.assign({}, list[i], { mode: 'read' }));
+  const unseen = list.map((_, i) => i).filter(i => !seen[l].includes(idOf(i)));
   if (!unseen.length) return null;
   const i = unseen[Math.floor(Math.random() * unseen.length)];
-  seen[l].push(i); store.set('cd_seen_read', seen);
+  seen[l].push(idOf(i)); store.set('cd_seen_read2', seen);
   const p = JSON.parse(JSON.stringify(list[i])); p.mode = 'read';
   return p;
 }
