@@ -150,7 +150,7 @@ const v1src = document.getElementById('v1-src').textContent;
 const v2src = document.getElementById('v2-src').textContent;
 const wrap = (src, names) => `(function(){var module;\n${src}\nreturn {${names}};})()`;
 const workerSrc = `
-const V1 = ${wrap(v1src, 'generate, makeSolver, gradeOptions, LEVELS')};
+const V1 = ${wrap(v1src, 'generate, makeSolver, solveDeep, gradeOptions, LEVELS')};
 const V2 = ${wrap(v2src, 'generate, generateRead, solveFdn, solveRead, classify')};
 function v1ToEvents(steps){
   const evs=[]; let first=true;
@@ -166,6 +166,8 @@ function v1ToEvents(steps){
       if(x.gainAbs) for(const sd of [0,1]) if(x.gainAbs[sd]) evs.push({t:'gain',side:sd,n:x.gainAbs[sd],ll:true});
     }
     if(x.life[0]<=0||x.life[1]<=0){ evs.push({t:'end'}); return evs; }
+    if(x.loop){ evs.push({t:'loop'}); return evs; }
+    if(x.cut){ evs.push({t:'cut'}); return evs; }
   }
   evs.push({t:'horizon'}); return evs;
 }
@@ -178,10 +180,9 @@ function basicPuzzle(level, board, st, maxPly, opts){
 }
 function solveBasic(spec){
   const L = V1.LEVELS[spec.level];
-  const s = V1.makeSolver(spec.board, L.maxPly);
   const st = { a:[(1<<spec.board.me.length)-1,(1<<spec.board.op.length)-1], life:spec.life.slice(), turn:0, tapped:spec.tapped };
-  const opts = s.rootOptions(st); V1.gradeOptions(opts);
-  return basicPuzzle(spec.level, spec.board, st, L.maxPly, opts.map(o=>({attackers:o.attackers,value:o.value,grade:o.grade,line:s.line(st,0,o.attackers,L.maxPly)})));
+  const { solver: s, opts, maxPly } = V1.solveDeep(spec.board, st, L.maxPly); V1.gradeOptions(opts);
+  return basicPuzzle(spec.level, spec.board, st, maxPly, opts.map(o=>({attackers:o.attackers,value:o.value,grade:o.grade,line:s.line(st,0,o.attackers,maxPly)})));
 }
 self.onmessage = function(e){
   const {id, type, mode, level, spec} = e.data;
@@ -426,7 +427,7 @@ const optMatch = (o, cast, mine) => (o.cast || null) === (cast || null) && sameS
 function outLabel(c) {
   if (c.cls === 'win') return c.mine ? (c.n === 1 ? 'このターンで勝ち' : `自分の${c.n}ターン目に勝ち`) : `相手の${c.n}ターン目中に勝ち`;
   if (c.cls === 'loss') return c.mine ? `自分の${c.n}ターン目中に負け` : `相手の${c.n}ターン目に負け`;
-  return `${puzzle.maxPly / 2}往復以内には決着つかず`;
+  return '決着つかず';
 }
 const MARK = { best: '◎', slow: '○', open: '△', loss: '×' };
 const sameSet = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
@@ -503,8 +504,10 @@ function lineHtml(line, outcome) {
     html += `<div class="step s${b.side} ${decisive ? 'key' : ''}"><span class="lv">自 ${Math.max(0, life[0])} / 敵 ${Math.max(0, life[1])}</span><div class="h">${b.side === 0 ? 'あなた' : '相手'}の${b.n}ターン目${decisive ? '<span class="keytag">決着</span>' : ''}</div>${note}${lines.map(l => `<div>${l}</div>`).join('')}${mini()}</div>`;
   }
   flushIdle();
+  if (blocks.some(b => b.ev.some(e => e.t === 'cut'))) html += `<div class="idle">…（ここから先の読み筋は長いので省略）</div>`;
   if (outcome.cls === 'win') html += `<div class="end win">→ 相手のライフが0に。勝ち！</div>`;
   else if (outcome.cls === 'loss') html += `<div class="end loss">→ あなたのライフが0に。負け</div>`;
+  else if (blocks.some(b => b.ev.some(e => e.t === 'loop'))) html += `<div class="end open">→ 同じ局面のくり返し（にらみ合い）になり、決着つかず（盤面の評価で比較）</div>`;
   else html += `<div class="end open">→ ${puzzle.maxPly / 2}往復以内には決着つかず（その時点の盤面の評価で比較）</div>`;
   return html;
 }
@@ -572,7 +575,7 @@ function render() {
     ・タップ中の相手生物は、前のターンに攻撃してきた生物（今ターンはブロック不可）<br>
     ・飛行は、飛行か到達を持つ生物でしかブロックできない<br>
     ・複数ブロックされたら、攻撃側がダメージを自由に割り振る（現行ルール）<br>
-    ・最大${P.maxPly / 2}往復先まで読んで評価（それより先で決着がつく場合も「決着つかず」として盤面の評価で比べる）
+    ${fdn ? '' : '・お互いに続けて攻撃しなかったら、同じ盤面のくり返し（にらみ合い）として決着つかず（同じ盤面では同じ判断をする前提）<br>'}・最大${P.maxPly / 2}往復先まで読んで評価（それより先で決着がつく場合も「決着つかず」として盤面の評価で比べる）
   </div>
   <div class="zone me">
     <div class="row" id="merow">${B.me.map((c, i) => cardHtml(c, 0, i, (sel.has(i) ? 'attack' : '') + (c.df ? ' dfc' : ''))).join('')}${castSel ? cardHtml(Object.assign({ hs: true }, hcd(castSel)), 0, slotOf(castSel), 'newc' + (sel.has(slotOf(castSel)) ? ' attack' : '')) : ''}</div>
