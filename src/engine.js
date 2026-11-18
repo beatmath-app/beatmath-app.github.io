@@ -103,11 +103,19 @@ function ccMenaceOK(attList, assign, nAtt) {
   return true;
 }
 
-function makeSolver(board, maxPly) {
+const ABORT = { abort: true };
+function makeSolver(board, maxPly, deadline = 0) {
   // board: {me:[creature], op:[creature]}  creature: {p,t,fly,reach,fs,ds,dt,tr,me,vg,ll,ind,df,hx,wd}
   const sides = [board.me, board.op];
-  const memo = new Map();
+  const memos = new Map();   // 読みの深さごとの memo
+  let memo = new Map();      // 読みの深さの限界や手順に依存する値（手数つきのキー）
+  memos.set(maxPly, memo);
+  const memoX = new Map();   // 限界にも手順にも依存しない値（手数なしのキー、勝敗は相対手数で保存）
+  let capHit = false;       // 読みの深さの限界に当たったか
   let nodes = 0;
+  const skey = st => st.a[0] + ',' + st.a[1] + ',' + st.life[0] + ',' + st.life[1] + ',' + st.turn + ',' + st.tapped;
+  const toRel = (v, p) => v >= 900 ? v + p : v <= -900 ? v - p : v;
+  const fromRel = (v, p) => v >= 900 ? v - p : v <= -900 ? v + p : v;
 
   function heuristic(st) {
     let v = 0;
@@ -173,7 +181,7 @@ function makeSolver(board, maxPly) {
       let tapped = 0;
       attackers.forEach(ai => { if (!acs[ai].vg) tapped |= 1 << ai; });   // 警戒は攻撃してもタップしない
       const gainAbs = [0, 0]; gainAbs[att] = o.gain[0]; gainAbs[def] = o.gain[1];
-      res.push({ a, life, turn: def, tapped: tapped & a[att], dmg: o.toPlayer, deadAtt, deadDef, gainAbs });
+      res.push({ a, life, turn: def, tapped: tapped & a[att], dmg: o.toPlayer, deadAtt, deadDef, gainAbs, pp: !attackers.length });
     }
     return res;
   }
@@ -192,21 +200,40 @@ function makeSolver(board, maxPly) {
   }
 
   // alpha-beta with transposition table. value from 自分's perspective.
+  // 局面の値 ＝「攻撃しない」と「いずれかで攻撃する」の良いほう。
+  // 相手が攻撃しなかった直後（st.pp）にこちらも攻撃しないと、同じ局面のくり返し（にらみ合い）として決着つかず。
   function value(st, ply, alpha = -Infinity, beta = Infinity) {
     if (st.life[1] <= 0) return WIN - ply;
     if (st.life[0] <= 0) return -WIN + ply;
-    if (ply >= maxPly) return heuristic(st);
-    const k = key(st, ply);
-    const e = memo.get(k);
-    if (e) {
-      if (e.f === 0) return e.v;
-      if (e.f === 1 && e.v >= beta) return e.v;
-      if (e.f === 2 && e.v <= alpha) return e.v;
-    }
-    nodes++;
+    if (ply >= maxPly) { capHit = true; return heuristic(st); }
     const maxer = st.turn === 0;
-    const subs = attackSubsets(st);
-    if (e && e.b !== undefined && e.b < subs.length) { const t = subs[e.b]; subs[e.b] = subs[0]; subs[0] = t; }
+    let best = st.pp ? heuristic(st) : attackValue(st, ply, [], alpha, beta);
+    let a = alpha, b = beta;
+    if (maxer) { if (best > a) a = best; } else { if (best < b) b = best; }
+    if (a >= b) return best;
+    const av = bestAttack(st, ply, a, b);
+    return maxer ? Math.max(best, av) : Math.min(best, av);
+  }
+
+  // 攻撃する選択肢（空でない攻撃の組み合わせ）の中での最善。直前に攻撃しなかったかどうかに依存しないので、それを除いたキーで保存
+  function bestAttack(st, ply, alpha, beta) {
+    const sk = skey(st);
+    const k = sk + ',' + ply;
+    let e = memoX.get(sk), ev;
+    if (e) ev = fromRel(e.v, ply);
+    else { e = memo.get(k); if (e) ev = e.v; }
+    if (e) {
+      if (e.f === 0 || (e.f === 1 && ev >= beta) || (e.f === 2 && ev <= alpha)) {
+        if (e.cap) capHit = true;
+        return ev;
+      }
+    }
+    if ((++nodes & 1023) === 0 && deadline && Date.now() > deadline) throw ABORT;
+    const sCap = capHit;
+    capHit = false;
+    const maxer = st.turn === 0;
+    const subs = attackSubsets(st).filter(x => x.length);
+    if (e && e.b >= 0 && e.b < subs.length) { const t = subs[e.b]; subs[e.b] = subs[0]; subs[0] = t; }
     let a = alpha, b = beta, best = maxer ? -Infinity : Infinity, bestSub = null;
     for (const s of subs) {
       const v = attackValue(st, ply, s, a, b);
@@ -214,17 +241,25 @@ function makeSolver(board, maxPly) {
       else { if (v < best) { best = v; bestSub = s; } if (best < b) b = best; }
       if (a >= b) break;
     }
+    const myCap = capHit;
+    capHit = sCap || myCap;
     const f = best <= alpha ? 2 : best >= beta ? 1 : 0;
-    memo.set(k, { v: best, f, b: attackSubsets(st).findIndex(x => x.join() === bestSub.join()) });
+    const bi = bestSub ? attackSubsets(st).filter(x => x.length).findIndex(x => x.join() === bestSub.join()) : -1;
+    if (!myCap) memoX.set(sk, { v: toRel(best, ply), f, b: bi });   // 深さの限界に依存しない値
+    else memo.set(k, { v: best, f, b: bi, cap: true });
     return best;
   }
 
   function attackValue(st, ply, attackers, alpha = -Infinity, beta = Infinity) {
+    // 相手が攻撃しなかった直後に、こちらも攻撃しない → お互い動かない局面のくり返し（にらみ合い）で決着つかず
+    if (!attackers.length && st.pp) return heuristic(st);
     const maxer = st.turn === 0;
     let worst = maxer ? Infinity : -Infinity;
     let a = alpha, b = beta;
     forEachBlock(st, attackers, (avail, assign) => {
       const outs = resolve(st, attackers, avail, assign);
+      // 最初の一手（問題の選択肢）は自由に選んだ手ではないので、「攻撃しない」でもにらみ合いの判定に数えない
+      if (ply === 0) outs.forEach(o => { o.pp = false; });
       let ov = maxer ? -Infinity : Infinity;
       let a2 = a, b2 = b;
       for (const o of outs) {
@@ -240,11 +275,23 @@ function makeSolver(board, maxPly) {
     return worst;
   }
 
-  function line(st, ply, attackers, limit = 12) {
+  // 読み筋（解説用）。深く読むと時間がかかることがあるので budgetMs で打ち切り、最後の手に cut を付ける
+  function line(st, ply, attackers, limit = 12, budgetMs = 2000) {
+    const saved = deadline;
+    deadline = Date.now() + budgetMs;
     const steps = [];
+    try { lineInner(st, ply, attackers, limit, steps); }
+    catch (e) { if (e !== ABORT) throw e; if (steps.length) steps[steps.length - 1].cut = true; capHit = false; }
+    finally { deadline = saved; }
+    return steps;
+  }
+  function lineInner(st, ply, attackers, limit, steps) {
     let cur = st, p = ply, atk = attackers;
+    const seen = new Set([skey(st)]);
     while (steps.length < limit) {
       if (cur.life[0] <= 0 || cur.life[1] <= 0 || p >= maxPly) break;
+      if (steps.length && seen.has(skey(cur))) { steps[steps.length - 1].loop = true; break; }
+      seen.add(skey(cur));
       if (!atk) {
         const maxer = cur.turn === 0;
         let best = maxer ? -Infinity : Infinity, bestA = [];
@@ -254,10 +301,16 @@ function makeSolver(board, maxPly) {
         }
         atk = bestA;
       }
+      if (!atk.length && cur.pp) {   // お互いに攻撃しない → にらみ合いで決着つかず
+        steps.push({ side: cur.turn, attackers: [], blocks: [], dmg: 0, deadAtt: 0, deadDef: 0, gainAbs: [0, 0], life: cur.life.slice(), value: heuristic(cur), loop: true });
+        break;
+      }
       const maxer = cur.turn === 0;
       let worst = maxer ? Infinity : -Infinity, pick = null;
+      const forced = p === ply && attackers;
       forEachBlock(cur, atk, (avail, assign) => {
         const outs = resolve(cur, atk, avail, assign);
+        if (forced) outs.forEach(o => { o.pp = false; });
         let ov = maxer ? -Infinity : Infinity, oo = null;
         for (const o of outs) {
           const v = value(o, p + 1);
@@ -277,7 +330,12 @@ function makeSolver(board, maxPly) {
     return attackSubsets(st).map(a => ({ attackers: a, value: attackValue(st, 0, a) }));
   }
 
-  return { value, attackValue, rootOptions, line, stats: () => ({ nodes, memo: memo.size }) };
+  // 読みの深さを変える（手数に依存しない memoX はそのまま使い回す）
+  function setDepth(d) {
+    maxPly = d; memo = memos.get(d) || new Map(); memos.set(d, memo);
+    capHit = false;
+  }
+  return { value, attackValue, rootOptions, line, setDepth, setDeadline: d => { deadline = d; }, capped: () => capHit, stats: () => ({ nodes, memo: memo.size, memoX: memoX.size }) };
 }
 
 // ---------- キーワード付与（生成用） ----------
@@ -326,9 +384,9 @@ function gradeOptions(opts) {
 }
 
 const LEVELS = {
-  easy:   { me: [2, 3], op: [1, 2], maxPly: 20,  life: [2, 8],  flyP: 0.25, tapP: 0.15, kwP: 0.3,  kwMax: 1 },
-  normal: { me: [2, 3], op: [2, 3], maxPly: 20, life: [2, 12], flyP: 0.2,  tapP: 0.25, kwP: 0.45, kwMax: 2 },
-  hard:   { me: [3, 4], op: [2, 4], maxPly: 20, life: [3, 14], flyP: 0.2,  tapP: 0.3,  kwP: 0.55, kwMax: 2, maxTotal: 6 },
+  easy:   { me: [2, 3], op: [1, 2], maxPly: 60,  life: [2, 8],  flyP: 0.25, tapP: 0.15, kwP: 0.3,  kwMax: 1 },
+  normal: { me: [2, 3], op: [2, 3], maxPly: 60, life: [2, 12], flyP: 0.2,  tapP: 0.25, kwP: 0.45, kwMax: 2 },
+  hard:   { me: [3, 4], op: [2, 4], maxPly: 60, life: [3, 14], flyP: 0.2,  tapP: 0.3,  kwP: 0.55, kwMax: 2, maxTotal: 6 },
 };
 
 function rint(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
@@ -338,6 +396,27 @@ function randCreature(flyP, kwP = 0, kwMax = 0, pool = KW_POOL_BASIC) {
   const fly = Math.random() < flyP;
   const c = { p, t, fly, reach: !fly && Math.random() < 0.1 };
   return addKeywords(c, kwP, kwMax, pool);
+}
+
+// 20ターンまでは必ず読み、そこから時間の許すかぎり深く（最大 maxPly）読み直す。
+// 同じ局面のくり返しは決着つかずとして打ち切るので、たいていは最後まで読み切れる。
+const DEPTHS = [20, 30, 40, 60];
+function solveDeep(board, st, maxPly, budgetMs = 8000, pre = null) {
+  const t0 = Date.now();
+  const depths = DEPTHS.filter(x => x < maxPly).concat([maxPly]);
+  // pre: すでに最初の深さで解いた結果 { solver, opts }（生成時のふるいで解いたものを使い回す）
+  const solver = pre ? pre.solver : makeSolver(board, depths[0]);
+  let res = pre ? { solver, opts: pre.opts, maxPly: depths[0] } : null;
+  if (res && !solver.capped()) return res;
+  for (const d of pre ? depths.slice(1) : depths) {
+    solver.setDepth(d);
+    solver.setDeadline(res ? t0 + budgetMs : 0);   // 最初の深さは必ず読み切る
+    try { res = { solver, opts: solver.rootOptions(st), maxPly: d }; }
+    catch (e) { if (e !== ABORT) throw e; solver.setDepth(res.maxPly); break; }
+    if (!solver.capped()) break;   // 深さの限界に一度も当たらず読み切れた
+  }
+  solver.setDeadline(0);
+  return res;
 }
 
 function tryPuzzle(levelName) {
@@ -353,28 +432,39 @@ function tryPuzzle(levelName) {
   if (Math.random() < L.tapP) for (let i = 0; i < no; i++) if (Math.random() < 0.5 && !board.op[i].df) tapped |= 1 << i;
   if (board.me.every(c => c.df)) return null;
   const st = { a: [(1 << nm) - 1, (1 << no) - 1], life: [rint(L.life[0], L.life[1]), rint(L.life[0], L.life[1])], turn: 0, tapped };
-  const solver = makeSolver(board, L.maxPly);
-  const opts = solver.rootOptions(st);
+  // まず20ターンで解いて条件をふるい、通ったものだけ深く読み直して確かめる
+  const r = [Math.random(), Math.random(), Math.random()];   // ふるいの乱数は2回の判定で共通に
+  const s20 = makeSolver(board, DEPTHS[0], Date.now() + 15000);
+  let pre;
+  try { pre = s20.rootOptions(st); } catch (e) { if (e === ABORT) return null; throw e; }
+  s20.setDeadline(0);
+  if (!basicOK(pre, board, r)) return null;
+  const { solver, opts, maxPly } = solveDeep(board, st, L.maxPly, 8000, { solver: s20, opts: pre });
+  if (!basicOK(opts, board, r)) return null;
+  const bc = gradeOptions(opts);
+  return { level: levelName, board, st, best: bc, maxPly,
+    opts: opts.map(o => ({ attackers: o.attackers, value: o.value, grade: o.grade, c: o.c, line: solver.line(st, 0, o.attackers, maxPly, 1000) })) };
+}
+function basicOK(opts, board, r) {
   const bc = gradeOptions(opts);
   // --- filters ---
-  if (bc.cls === 'loss') return null;                     // 何をしても負け
+  if (bc.cls === 'loss') return false;                    // 何をしても負け
   const nBest = opts.filter(o => o.grade === 'best').length;
-  if (nBest / opts.length > 0.4) return null;             // 正解が多すぎる
+  if (nBest / opts.length > 0.4) return false;             // 正解が多すぎる
   const nElig = board.me.filter(c => !c.df).length;
   const all = opts.find(o => o.attackers.length === nElig);
   const none = opts.find(o => o.attackers.length === 0);
-  if (all.grade === 'best' && none.grade !== 'best' && Math.random() < 0.6) return null; // 全員攻撃が正解の問題は減らす
-  if (all.grade === 'best' && none.grade === 'best') return null;
-  if (none.grade === 'best' && Math.random() < 0.7) return null; // 「攻撃しない」が正解の問題は少なめ
+  if (all.grade === 'best' && none.grade !== 'best' && r[0] < 0.6) return false; // 全員攻撃が正解の問題は減らす
+  if (all.grade === 'best' && none.grade === 'best') return false;
+  if (none.grade === 'best' && r[1] < 0.7) return false; // 「攻撃しない」が正解の問題は少なめ
   if (bc.cls === 'win') {
     const bad = opts.filter(o => o.grade === 'open' || o.grade === 'loss').length;
-    if (bad === 0) return null;                           // どれでも勝てる
-    if (bc.n === 1 && Math.random() < 0.5) return null;   // 即死問題は少なめ
+    if (bad === 0) return false;                           // どれでも勝てる
+    if (bc.n === 1 && r[2] < 0.5) return false;   // 即死問題は少なめ
   } else {
-    if (!opts.some(o => o.grade === 'loss')) return null;
+    if (!opts.some(o => o.grade === 'loss')) return false;
   }
-  return { level: levelName, board, st, best: bc, maxPly: L.maxPly,
-    opts: opts.map(o => ({ attackers: o.attackers, value: o.value, grade: o.grade, c: o.c, line: solver.line(st, 0, o.attackers, L.maxPly) })) };
+  return true;
 }
 
 function generate(levelName, budgetMs = 4000) {
@@ -385,7 +475,7 @@ function generate(levelName, budgetMs = 4000) {
     const p = tryPuzzle(levelName);
     if (p) { p.tries = tries; return p; }
   }
-  return null;
+  return false;
 }
 
 // Explain a chosen attack: principal variation
@@ -394,4 +484,4 @@ function explain(puzzle, attackers) {
   return s.line(puzzle.st, 0, attackers, puzzle.maxPly);
 }
 
-if (typeof module !== 'undefined') module.exports = { makeSolver, WIN, classify, gradeOptions, generate, explain, LEVELS };
+if (typeof module !== 'undefined') module.exports = { makeSolver, solveDeep, WIN, classify, gradeOptions, generate, explain, LEVELS };
