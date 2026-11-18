@@ -635,11 +635,8 @@ function makeSolver(board, maxPly, deadline = 0) {
   }
   function lineInner(st, ply, attackers, limit, steps) {
     let cur = st, p = ply, atk = attackers;
-    const seen = new Set([skey(st)]);
     while (steps.length < limit) {
       if (cur.life[0] <= 0 || cur.life[1] <= 0 || p >= maxPly) break;
-      if (steps.length && seen.has(skey(cur))) { steps[steps.length - 1].loop = true; break; }
-      seen.add(skey(cur));
       if (!atk) {
         const maxer = cur.turn === 0;
         let best = maxer ? -Infinity : Infinity, bestA = [];
