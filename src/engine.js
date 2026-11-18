@@ -329,7 +329,9 @@ function makeSolver(board, maxPly, deadline = 0) {
     maxPly = d; memo = memos.get(d) || new Map(); memos.set(d, memo);
     capHit = false;
   }
-  return { value, attackValue, rootOptions, line, setDepth, setDeadline: d => { deadline = d; }, capped: () => capHit, stats: () => ({ nodes, memo: memo.size, memoX: memoX.size }) };
+  // 外から1局面だけ評価：値と、深さの限界に当たったか
+  function top(st, ply) { capHit = false; const v = value(st, ply); return { v, capped: capHit }; }
+  return { value, top, attackValue, rootOptions, line, setDepth, setDeadline: d => { deadline = d; }, capped: () => capHit, stats: () => ({ nodes, memo: memo.size, memoX: memoX.size }) };
 }
 
 // ---------- キーワード付与（生成用） ----------

@@ -125,11 +125,18 @@ function ccMenaceOK(attList, assign, nAtt) {
   return true;
 }
 
-function makeVanilla(board, maxPly) {
+function makeVanilla(board, maxPly) {   // engine.js の makeSolver と同じ（打ち切りはモジュールの deadline）
   // board: {me:[creature], op:[creature]}  creature: {p,t,fly,reach,fs,ds,dt,tr,me,vg,ll,ind,df,hx,wd}
   const sides = [board.me, board.op];
-  const memo = new Map();
+  const memos = new Map();   // 読みの深さごとの memo
+  let memo = new Map();      // 読みの深さの限界や手順に依存する値（手数つきのキー）
+  memos.set(maxPly, memo);
+  const memoX = new Map();   // 限界にも手順にも依存しない値（手数なしのキー、勝敗は相対手数で保存）
+  let capHit = false;       // 読みの深さの限界に当たったか
   let nodes = 0;
+  const skey = st => st.a[0] + ',' + st.a[1] + ',' + st.life[0] + ',' + st.life[1] + ',' + st.turn + ',' + st.tapped;
+  const toRel = (v, p) => v >= 900 ? v + p : v <= -900 ? v - p : v;
+  const fromRel = (v, p) => v >= 900 ? v - p : v <= -900 ? v + p : v;
 
   function heuristic(st) {
     let v = 0;
@@ -195,7 +202,7 @@ function makeVanilla(board, maxPly) {
       let tapped = 0;
       attackers.forEach(ai => { if (!acs[ai].vg) tapped |= 1 << ai; });   // 警戒は攻撃してもタップしない
       const gainAbs = [0, 0]; gainAbs[att] = o.gain[0]; gainAbs[def] = o.gain[1];
-      res.push({ a, life, turn: def, tapped: tapped & a[att], dmg: o.toPlayer, deadAtt, deadDef, gainAbs });
+      res.push({ a, life, turn: def, tapped: tapped & a[att], dmg: o.toPlayer, deadAtt, deadDef, gainAbs, pp: !attackers.length });
     }
     return res;
   }
@@ -214,21 +221,41 @@ function makeVanilla(board, maxPly) {
   }
 
   // alpha-beta with transposition table. value from 自分's perspective.
+  // 局面の値 ＝「攻撃しない」と「いずれかで攻撃する」の良いほう。
+  // 相手が攻撃しなかった直後（st.pp）にこちらも攻撃しないと、同じ局面のくり返し（にらみ合い）として決着つかず。
+  // 同じ局面では同じ判断をする前提なので、問題の選択肢として選んだ最初の「攻撃しない」も数える。
   function value(st, ply, alpha = -Infinity, beta = Infinity) {
     if (st.life[1] <= 0) return WIN - ply;
     if (st.life[0] <= 0) return -WIN + ply;
-    if (ply >= maxPly) return heuristic(st);
-    const k = key(st, ply);
-    const e = memo.get(k);
-    if (e) {
-      if (e.f === 0) return e.v;
-      if (e.f === 1 && e.v >= beta) return e.v;
-      if (e.f === 2 && e.v <= alpha) return e.v;
-    }
-    nodes++;
+    if (ply >= maxPly) { capHit = true; return heuristic(st); }
     const maxer = st.turn === 0;
-    const subs = attackSubsets(st);
-    if (e && e.b !== undefined && e.b < subs.length) { const t = subs[e.b]; subs[e.b] = subs[0]; subs[0] = t; }
+    let best = st.pp ? heuristic(st) : attackValue(st, ply, [], alpha, beta);
+    let a = alpha, b = beta;
+    if (maxer) { if (best > a) a = best; } else { if (best < b) b = best; }
+    if (a >= b) return best;
+    const av = bestAttack(st, ply, a, b);
+    return maxer ? Math.max(best, av) : Math.min(best, av);
+  }
+
+  // 攻撃する選択肢（空でない攻撃の組み合わせ）の中での最善。直前に攻撃しなかったかどうかに依存しないので、それを除いたキーで保存
+  function bestAttack(st, ply, alpha, beta) {
+    const sk = skey(st);
+    const k = sk + ',' + ply;
+    let e = memoX.get(sk), ev;
+    if (e) ev = fromRel(e.v, ply);
+    else { e = memo.get(k); if (e) ev = e.v; }
+    if (e) {
+      if (e.f === 0 || (e.f === 1 && ev >= beta) || (e.f === 2 && ev <= alpha)) {
+        if (e.cap) capHit = true;
+        return ev;
+      }
+    }
+    if ((++nodes & 1023) === 0 && deadline && Date.now() > deadline) throw ABORT;
+    const sCap = capHit;
+    capHit = false;
+    const maxer = st.turn === 0;
+    const subs = attackSubsets(st).filter(x => x.length);
+    if (e && e.b >= 0 && e.b < subs.length) { const t = subs[e.b]; subs[e.b] = subs[0]; subs[0] = t; }
     let a = alpha, b = beta, best = maxer ? -Infinity : Infinity, bestSub = null;
     for (const s of subs) {
       const v = attackValue(st, ply, s, a, b);
@@ -236,12 +263,18 @@ function makeVanilla(board, maxPly) {
       else { if (v < best) { best = v; bestSub = s; } if (best < b) b = best; }
       if (a >= b) break;
     }
+    const myCap = capHit;
+    capHit = sCap || myCap;
     const f = best <= alpha ? 2 : best >= beta ? 1 : 0;
-    memo.set(k, { v: best, f, b: attackSubsets(st).findIndex(x => x.join() === bestSub.join()) });
+    const bi = bestSub ? attackSubsets(st).filter(x => x.length).findIndex(x => x.join() === bestSub.join()) : -1;
+    if (!myCap) memoX.set(sk, { v: toRel(best, ply), f, b: bi });   // 深さの限界に依存しない値
+    else memo.set(k, { v: best, f, b: bi, cap: true });
     return best;
   }
 
   function attackValue(st, ply, attackers, alpha = -Infinity, beta = Infinity) {
+    // 相手が攻撃しなかった直後に、こちらも攻撃しない → お互い動かない局面のくり返し（にらみ合い）で決着つかず
+    if (!attackers.length && st.pp) return heuristic(st);
     const maxer = st.turn === 0;
     let worst = maxer ? Infinity : -Infinity;
     let a = alpha, b = beta;
@@ -262,8 +295,17 @@ function makeVanilla(board, maxPly) {
     return worst;
   }
 
-  function line(st, ply, attackers, limit = 12) {
+  // 読み筋（解説用）。深く読むと時間がかかることがあるので budgetMs で打ち切り、最後の手に cut を付ける
+  function line(st, ply, attackers, limit = 12, budgetMs = 2000) {
+    const saved = deadline;
+    deadline = Date.now() + budgetMs;
     const steps = [];
+    try { lineInner(st, ply, attackers, limit, steps); }
+    catch (e) { if (e !== ABORT) throw e; if (steps.length) steps[steps.length - 1].cut = true; capHit = false; }
+    finally { deadline = saved; }
+    return steps;
+  }
+  function lineInner(st, ply, attackers, limit, steps) {
     let cur = st, p = ply, atk = attackers;
     while (steps.length < limit) {
       if (cur.life[0] <= 0 || cur.life[1] <= 0 || p >= maxPly) break;
@@ -275,6 +317,10 @@ function makeVanilla(board, maxPly) {
           if (maxer ? v > best : v < best) { best = v; bestA = a; }
         }
         atk = bestA;
+      }
+      if (!atk.length && cur.pp) {   // お互いに攻撃しない → にらみ合いで決着つかず
+        steps.push({ side: cur.turn, attackers: [], blocks: [], dmg: 0, deadAtt: 0, deadDef: 0, gainAbs: [0, 0], life: cur.life.slice(), value: heuristic(cur), loop: true });
+        break;
       }
       const maxer = cur.turn === 0;
       let worst = maxer ? Infinity : -Infinity, pick = null;
@@ -299,7 +345,14 @@ function makeVanilla(board, maxPly) {
     return attackSubsets(st).map(a => ({ attackers: a, value: attackValue(st, 0, a) }));
   }
 
-  return { value, attackValue, rootOptions, line, stats: () => ({ nodes, memo: memo.size }) };
+  // 読みの深さを変える（手数に依存しない memoX はそのまま使い回す）
+  function setDepth(d) {
+    maxPly = d; memo = memos.get(d) || new Map(); memos.set(d, memo);
+    capHit = false;
+  }
+  // 外から1局面だけ評価：値と、深さの限界に当たったか
+  function top(st, ply) { capHit = false; const v = value(st, ply); return { v, capped: capHit }; }
+  return { value, top, attackValue, rootOptions, line, setDepth, capped: () => capHit, stats: () => ({ nodes, memo: memo.size, memoX: memoX.size }) };
 }
 
 // ---------- キーワード付与（生成用） ----------
@@ -346,6 +399,7 @@ function isCreatureCard(id) { return !!HC[id]; }
 function clone(s) {
   return {
     ply: s.ply, act: s.act, life: s.life.slice(), hand: [s.hand[0].slice(), s.hand[1].slice()], lands: s.lands, mana: s.mana.slice(), phase: s.phase,
+    quiet: s.quiet, pp: s.pp,
     cr: [s.cr[0].map(c => Object.assign({}, c)), s.cr[1].map(c => Object.assign({}, c))],
     atk: s.atk, blk: s.blk ? s.blk.slice() : null,
     win: s.win ? { prio: s.win.prio, passes: s.win.passes, stack: s.win.stack.map(x => ({ c: x.c, by: x.by, tg: x.tg.slice(), kick: x.kick })) } : null,
@@ -558,6 +612,9 @@ function combatDamage(s0) {
 
 // ---------- flow ----------
 function endTurn(s, ev) {
+  // お互いに2ターン続けて何もしなかった（攻撃も呪文もなし）→ 同じ局面のくり返し（にらみ合い）で決着つかず
+  if (s.quiet && s.pp) s.loopDraw = true;
+  s.pp = s.quiet; s.quiet = true;
   for (const side of [0, 1]) for (const c of s.cr[side]) { c.tp = c.tt = c.dmg = 0; c.dtHit = c.fs = c.ind = c.hex = c.prev = c.tfly = false; }
   s.act = 1 - s.act; s.ply++;
   for (const c of s.cr[s.act]) { c.tap = false; c.sick = false; }     // アンタップ・召喚酔いが解ける
@@ -592,6 +649,7 @@ function advance(s, ev, maxPly) {
   for (let guard = 0; guard < 100; guard++) {
     const tv = terminal(s);
     if (tv !== null) { s.val = tv; return s; }
+    if (s.loopDraw) { s.val = heuristic(s); s.stalemate = true; return s; }
     if (s.ply >= maxPly) { s.val = heuristic(s); s.leaf = true; return s; }
     switch (s.phase) {
       case 'w1': case 'w2': case 'w3': case 'w4': {
@@ -645,14 +703,16 @@ function vanillaState(s) {
   const mask = side => s.cr[side].reduce((m, c, i) => c.alive ? m | 1 << i : m, 0);
   const def = 1 - s.act;
   const tapped = s.cr[def].reduce((m, c, i) => c.alive && c.tap ? m | 1 << i : m, 0);
-  return { a: [mask(0), mask(1)], life: s.life.slice(), turn: s.act, tapped };
+  return { a: [mask(0), mask(1)], life: s.life.slice(), turn: s.act, tapped, pp: s.pp };
 }
 function vanillaValue(s, maxPly) {
   const sides = vanillaSides(s);
   const bk = JSON.stringify(sides) + maxPly;
   let solver = vanillaCache.get(bk);
   if (!solver) { solver = makeVanilla({ me: sides[0], op: sides[1] }, maxPly); vanillaCache.set(bk, solver); if (vanillaCache.size > 2000) vanillaCache.clear(); }
-  const v = solver.value(vanillaState(s), s.ply);
+  const r = solver.top(vanillaState(s), s.ply);
+  s.vcap = r.capped;
+  const v = r.v;
   if (v >= 900) return v + 1;
   if (v <= -900) return v - 1;
   return v;
@@ -671,7 +731,7 @@ function children(s, maxPly) {
         ns.hand[p].splice(ns.hand[p].indexOf(o.card), 1);
         ns.mana[p] -= o.cost;
         ns.win.stack.push({ c: o.card, by: p, tg: o.tg, kick: !!o.kick });
-        ns.win.prio = 1 - p; ns.win.passes = 1;
+        ns.win.prio = 1 - p; ns.win.passes = 1; ns.quiet = false;
         push(ns, [{ t: 'cast', by: p, c: o.card, tg: o.tg, kick: !!o.kick, resp: s.win.stack.length > 0 }]);
       }
       break;
@@ -682,7 +742,7 @@ function children(s, maxPly) {
       for (let m = 0; m < (1 << avail.length); m++) {
         const ns = clone(s); let mask = 0;
         avail.forEach((i, j) => { if (m >> j & 1) { mask |= 1 << i; if (!ns.cr[s.act][i].k.vg) ns.cr[s.act][i].tap = true; } });
-        ns.atk = mask;
+        ns.atk = mask; if (mask) ns.quiet = false;
         ns.phase = mask ? 'w2' : 'w4'; ns.win = null;
         push(ns, [{ t: 'atk', side: s.act, mask }]);
       }
@@ -728,8 +788,8 @@ function heuristic(s) {
   return Math.max(-400, Math.min(400, v));
 }
 
-function keyOf(s) {
-  let k = s.phase + s.ply + '|' + s.act + '|' + s.life[0] + ',' + s.life[1] + '|' + s.hand[0].join('.') + ',' + s.hand[1].join('.') + '|' + s.mana[0] + ',' + s.mana[1] + '|' + s.atk + '|' + (s.blk ? s.blk.join('.') : '') + '|';
+function keyOf(s, noPly) {
+  let k = s.phase + (noPly ? '' : s.ply) + (s.quiet ? 'q' : '') + (s.pp ? 'p' : '') + '|' + s.act + '|' + s.life[0] + ',' + s.life[1] + '|' + s.hand[0].join('.') + ',' + s.hand[1].join('.') + '|' + s.mana[0] + ',' + s.mana[1] + '|' + s.atk + '|' + (s.blk ? s.blk.join('.') : '') + '|';
   for (const side of [0, 1]) for (const c of s.cr[side]) {
     k += c.alive ? (c.tap ? 'T' : 'U') + (c.sick ? 's' : '') + c.ctr + ',' + c.tp + ',' + c.tt + ',' + c.dmg + (c.dtHit ? 'd' : '') + (c.fs ? 'f' : '') + (c.ind ? 'i' : '') + (c.hex ? 'h' : '') + (c.prev ? 'p' : '') + (c.tfly ? 'y' : '') + ';' : 'x;';
   }
@@ -738,21 +798,35 @@ function keyOf(s) {
 }
 
 function makeSolver(maxPly, tp) {
-  if (tp !== undefined) trickPly = tp;
+  trickPly = tp !== undefined ? tp : maxPly;
   vanillaHook = s => vanillaValue(s, maxPly);
-  const memo = new Map();
+  const memos = new Map();
+  let memo = new Map();      // 深さの限界（や近似）に依存する値：手数つきのキー
+  memos.set(maxPly, memo);
+  const memoX = new Map();   // 深さの限界に依存しない値：手数なしのキー、勝敗は相対手数で保存
+  let capHit = false;
   let nodes = 0;
+  const toRel = (v, p) => v >= 900 ? v + p : v <= -900 ? v - p : v;
+  const fromRel = (v, p) => v >= 900 ? v - p : v <= -900 ? v + p : v;
   function search(s, alpha = -Infinity, beta = Infinity) {
-    if (s.val !== undefined) return s.val;
-    const k = keyOf(s);
-    const e = memo.get(k);
+    if (s.val !== undefined) {
+      if (s.leaf || s.approx || s.vcap) capHit = true;
+      return s.val;
+    }
+    const kx = keyOf(s, true), k = keyOf(s);
+    let e = memoX.get(kx), ev;
+    if (e) ev = fromRel(e.v, s.ply);
+    else { e = memo.get(k); if (e) ev = e.v; }
     if (e) {
-      if (e.f === 0) return e.v;
-      if (e.f === 1 && e.v >= beta) return e.v;
-      if (e.f === 2 && e.v <= alpha) return e.v;
+      if (e.f === 0 || (e.f === 1 && ev >= beta) || (e.f === 2 && ev <= alpha)) {
+        if (e.cap) capHit = true;
+        return ev;
+      }
     }
     nodes++;
     if ((nodes & 2047) === 0 && deadline && Date.now() > deadline) throw ABORT;
+    const sCap = capHit;
+    capHit = false;
     const maxer = s.dec === 0;
     const ch = children(s, maxPly);
     if (e && e.b !== undefined && e.b < ch.length) { const t = ch[e.b]; ch[e.b] = ch[0]; ch[0] = t; }
@@ -763,14 +837,33 @@ function makeSolver(maxPly, tp) {
       if (maxer) { if (best > a) a = best; } else { if (best < b) b = best; }
       if (a >= b) break;
     }
+    const myCap = capHit;
+    capHit = sCap || myCap;
     const f = best <= alpha ? 2 : best >= beta ? 1 : 0;
     let orig = bi;
     if (e && e.b !== undefined && e.b < ch.length) { if (bi === 0) orig = e.b; else if (bi === e.b) orig = 0; }
-    memo.set(k, { v: best, f, b: orig });
+    if (!myCap) memoX.set(kx, { v: toRel(best, s.ply), f, b: orig });
+    else memo.set(k, { v: best, f, b: orig, cap: true });
     return best;
   }
-  function line(s, limit = 400) {
+  // 読みの深さを変える（深さに依存しない memoX はそのまま使い回す）
+  function setDepth(d) {
+    maxPly = d; memo = memos.get(d) || new Map(); memos.set(d, memo);
+    capHit = false;
+    if (tp === undefined) trickPly = d;
+    vanillaHook = s => vanillaValue(s, maxPly);
+  }
+  // 読み筋（解説用）。時間がかかりすぎたら打ち切って 'cut' を付ける
+  function line(s, limit = 400, budgetMs = 2000) {
+    const saved = deadline;
+    deadline = Date.now() + budgetMs;
     const evs = [];
+    try { lineInner(s, limit, evs); }
+    catch (e) { if (e !== ABORT) throw e; evs.push({ t: 'cut' }); capHit = false; }
+    finally { deadline = saved; }
+    return evs;
+  }
+  function lineInner(s, limit, evs) {
     let cur = s;
     for (let n = 0; n < limit; n++) {
       if (cur.vanilla) { if (cur.approx) evs.push({ t: 'approx' }); evs.push(...vanillaLine(cur, maxPly)); break; }
@@ -784,7 +877,7 @@ function makeSolver(maxPly, tp) {
     }
     return evs;
   }
-  return { search, line, children: s => children(s, maxPly), stats: () => ({ nodes, memo: memo.size }) };
+  return { search, line, setDepth, capped: () => capHit, resetCap: () => { capHit = false; }, depth: () => maxPly, children: s => children(s, maxPly), stats: () => ({ nodes, memo: memo.size, memoX: memoX.size }) };
 }
 
 // 基本用エンジンで続きの展開を作り、イベント形式に変換
@@ -810,6 +903,7 @@ function v1StepsToEvents(steps, firstHasNoTurn) {
       if (x.gainAbs) for (const sd of [0, 1]) if (x.gainAbs[sd]) evs.push({ t: 'gain', side: sd, n: x.gainAbs[sd], ll: true });
     }
     if (x.life[0] <= 0 || x.life[1] <= 0) { evs.push({ t: 'end' }); return evs; }
+    if (x.cut) { evs.push({ t: 'cut' }); return evs; }
   }
   evs.push({ t: 'horizon' });
   return evs;
@@ -824,6 +918,7 @@ function setHandCreatures(board, hc) {
 function initialState(board, life, hand, lands, tappedOp) {
   const s = {
     ply: 0, act: 0, life: life.slice(), hand: [hand[0].slice(), hand[1].slice()], lands: lands.slice(), mana: lands.slice(), phase: 'atk',
+    quiet: true, pp: false,   // quiet: このターンまだ誰も攻撃も呪文もしていない / pp: 前のターンがそうだった
     cr: [board.me.map(newCreature), board.op.map(newCreature)], atk: 0, blk: null, win: null,
   };
   for (const id of Object.keys(HC)) {
@@ -836,9 +931,12 @@ function initialState(board, life, hand, lands, tappedOp) {
 }
 
 // ルート：自分のターンの攻撃宣言（速攻クリーチャーを戦闘前に唱えるかどうかも含む）
-function rootOptions(board, life, hand, lands, tappedOp, maxPly, tp, hc) {
+// budgetMs を指定すると、maxPly まで時間の許すかぎり深く読み直す（最初の深さ BASE_PLY は必ず読み切る）
+const BASE_PLY = 10, DEPTHS2 = [10, 20, 30, 40, 60];
+function rootOptions(board, life, hand, lands, tappedOp, maxPly, tp, hc, budgetMs = 0) {
   setHandCreatures(board, hc);
-  const solver = makeSolver(maxPly, tp);
+  const depths = budgetMs ? DEPTHS2.filter(d => d < maxPly).concat([maxPly]) : [maxPly];
+  const solver = makeSolver(depths[0], tp);
   const s0 = initialState(board, life, hand, lands, tappedOp);
   const variants = [{ cast: null, s: s0, pre: [] }];
   for (const id of new Set(s0.hand[0])) {
@@ -846,27 +944,42 @@ function rootOptions(board, life, hand, lands, tappedOp, maxPly, tp, hc) {
     if (!H || H.flash || H.cost > s0.mana[0]) continue;
     const s1 = clone(s0);
     s1.hand[0].splice(s1.hand[0].indexOf(id), 1);
-    s1.mana[0] -= H.cost;
+    s1.mana[0] -= H.cost; s1.quiet = false;
     const c = s1.cr[0][H.slot]; c.alive = true; c.inHand = false; c.sick = true;
     variants.push({ cast: id, s: s1, pre: [{ t: 'cast', by: 0, c: id, tg: [] }, { t: 'resolve', by: 0, c: id }, { t: 'enter', side: 0, i: H.slot }] });
   }
-  const opts = [];
-  for (const vt of variants) {
-    const pre = [];
-    const st = advance(vt.s, pre, maxPly);
-    if (st.val !== undefined || st.phase !== 'atk' || st.act !== 0 || st.ply !== 0) {
-      // 攻撃できるクリーチャーがいない：選択肢は「攻撃しない」だけ
-      opts.push({ cast: vt.cast, attackers: [], value: st.val !== undefined ? st.val : solver.search(st), _ch: { ev: [{ t: 'atk', side: 0, mask: 0 }].concat(pre), s: st }, _pre: vt.pre });
-      continue;
+  const evalAll = d => {
+    const opts = [];
+    for (const vt of variants) {
+      const pre = [];
+      const st = advance(clone(vt.s), pre, d);
+      if (st.val !== undefined || st.phase !== 'atk' || st.act !== 0 || st.ply !== 0) {
+        // 攻撃できるクリーチャーがいない：選択肢は「攻撃しない」だけ
+        opts.push({ cast: vt.cast, attackers: [], value: st.val !== undefined ? st.val : solver.search(st), _ch: { ev: [{ t: 'atk', side: 0, mask: 0 }].concat(pre), s: st }, _pre: vt.pre });
+        continue;
+      }
+      for (const ch of solver.children(st)) {
+        const mask = ch.ev[0].mask;
+        const attackers = []; for (let i = 0; i < 8; i++) if (mask >> i & 1) attackers.push(i);
+        opts.push({ cast: vt.cast, attackers, value: solver.search(ch.s), _ch: ch, _pre: vt.pre });
+      }
     }
-    for (const ch of solver.children(st)) {
-      const mask = ch.ev[0].mask;
-      const attackers = []; for (let i = 0; i < 8; i++) if (mask >> i & 1) attackers.push(i);
-      opts.push({ cast: vt.cast, attackers, value: solver.search(ch.s), _ch: ch, _pre: vt.pre });
-    }
+    return opts;
+  };
+  const outer = deadline, t0 = Date.now();
+  let res = null;
+  for (const d of depths) {
+    solver.setDepth(d); solver.resetCap();
+    if (res) deadline = outer ? Math.min(outer, t0 + budgetMs) : t0 + budgetMs;
+    try { res = { opts: evalAll(d), depth: d }; }
+    catch (e) { if (e !== ABORT || !res) throw e; break; }
+    finally { deadline = outer; }
+    if (!solver.capped()) break;   // 深さの限界に一度も当たらずに読み切れた
   }
+  solver.setDepth(res.depth);
+  const opts = res.opts;
   for (const o of opts) { o.line = o._pre.concat(o._ch.ev, solver.line(o._ch.s)); delete o._ch; delete o._pre; }
-  return { opts, solver };
+  return { opts, solver, maxPly: res.depth };
 }
 
 
@@ -889,9 +1002,9 @@ function gradeOptions(opts) {
 }
 
 const LEVELS = {
-  easy:   { me: [1, 2], op: [1, 2], life: [2, 7],  flyP: 0.2, tapP: 0.15, handP: [0.5, 0.8], creatureP: [0.2, 0.25], kwP: 0.25, kwMax: 1, maxPly: 10, trickPly: 10 },
-  normal: { me: [2, 3], op: [1, 2], life: [2, 9],  flyP: 0.2, tapP: 0.2,  handP: [0.7, 0.8], creatureP: [0.3, 0.3],  kwP: 0.4,  kwMax: 2, maxPly: 10, trickPly: 10, swap: true },
-  hard:   { me: [2, 3], op: [2, 3], life: [3, 10], flyP: 0.2, tapP: 0.25, handP: [0.8, 0.8], creatureP: [0.35, 0.3], kwP: 0.5,  kwMax: 2, maxPly: 10, trickPly: 10, maxTotal: 5 },
+  easy:   { me: [1, 2], op: [1, 2], life: [2, 7],  flyP: 0.2, tapP: 0.15, handP: [0.5, 0.8], creatureP: [0.2, 0.25], kwP: 0.25, kwMax: 1, maxPly: 60, trickPly: 60 },
+  normal: { me: [2, 3], op: [1, 2], life: [2, 9],  flyP: 0.2, tapP: 0.2,  handP: [0.7, 0.8], creatureP: [0.3, 0.3],  kwP: 0.4,  kwMax: 2, maxPly: 60, trickPly: 60, swap: true },
+  hard:   { me: [2, 3], op: [2, 3], life: [3, 10], flyP: 0.2, tapP: 0.25, handP: [0.8, 0.8], creatureP: [0.35, 0.3], kwP: 0.5,  kwMax: 2, maxPly: 60, trickPly: 60, maxTotal: 5 },
 };
 function rint(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
 function randCreature(flyP, kwP = 0, kwMax = 0) {
@@ -916,21 +1029,40 @@ function instCost(id) { return CARDS[id].cost; }
 
 // ---------- 解く（フィルタなし。問題IDからの復元にも使う） ----------
 // spec: { level, board, life, tapped, hand:[[ids],[ids]], lands, hc:[手札クリーチャー定義], scen? }
+const SOLVE_BUDGET = 8000;
+// 手札なしの基本エンジンで、時間の許すかぎり深く読む
+function vanillaDeep(board, st, maxPly, budgetMs) {
+  const depths = DEPTHS2.filter(d => d < maxPly).concat([maxPly]);
+  const vs = makeVanilla(board, depths[0]);
+  const outer = deadline, t0 = Date.now();
+  let opts = null;
+  for (const d of depths) {
+    vs.setDepth(d);
+    if (opts) deadline = outer ? Math.min(outer, t0 + budgetMs) : t0 + budgetMs;
+    try { opts = vs.rootOptions(st); }
+    catch (e) { if (e !== ABORT || !opts) throw e; break; }
+    finally { deadline = outer; }
+    if (!vs.capped()) break;
+  }
+  return opts;
+}
 function solveFdn(spec, tp) {
   vanillaCache.clear();
   const L = LEVELS[spec.level];
   const { board, life, hand, lands, tapped } = spec;
   const hc = spec.hc || [];
   const nm = board.me.length, no = board.op.length;
-  const vs = makeVanilla(board, L.maxPly);
   const st = { a: [(1 << nm) - 1, (1 << no) - 1], life: life.slice(), turn: 0, tapped };
-  const naive = vs.rootOptions(st);
+  const naive = vanillaDeep(board, st, tp ? BASE_PLY : L.maxPly, 3000);   // 手札がなかったときの答え（比較用）
   const nbest = Math.max(...naive.map(o => o.value));
   const naiveBest = naive.filter(o => o.value === nbest).map(o => o.attackers);
-  const opts = rootOptions(board, life, hand, lands, tapped, L.maxPly, tp || L.trickPly, hc).opts;
+  // tp あり：手札を tp ターンだけ考える速い近似（生成時のふるい）。なし：最大 L.maxPly まで時間の許すかぎり深く
+  const r = tp ? rootOptions(board, life, hand, lands, tapped, BASE_PLY, tp, hc)
+               : rootOptions(board, life, hand, lands, tapped, L.maxPly, undefined, hc, SOLVE_BUDGET);
+  const opts = r.opts;
   const bc = gradeOptions(opts);
   return {
-    mode: 'fdn', level: spec.level, board, life, hand, lands, tapped, hc, maxPly: L.maxPly, best: bc, naiveBest,
+    mode: 'fdn', level: spec.level, board, life, hand, lands, tapped, hc, maxPly: r.maxPly, best: bc, naiveBest,
     opts: opts.map(o => ({ cast: o.cast, attackers: o.attackers, value: o.value, grade: o.grade, c: o.c, line: o.line })),
   };
 }
@@ -941,10 +1073,13 @@ function solveRead(spec, tp) {
   const { board, life, hand, lands, tapped, scen } = spec;
   const hc = spec.hc || [];
   const probs = scen.map(() => 100 / scen.length); // 候補は均等確率
+  let depth = Infinity;
   const per = scen.map(h => {
-    const { opts } = rootOptions(board, life, [hand[0], h ? [h] : []], lands, tapped, L.maxPly, tp || L.trickPly, hc);
-    gradeOptions(opts);
-    return opts;
+    const r = tp ? rootOptions(board, life, [hand[0], h ? [h] : []], lands, tapped, BASE_PLY, tp, hc)
+                 : rootOptions(board, life, [hand[0], h ? [h] : []], lands, tapped, L.maxPly, undefined, hc, Math.round(SOLVE_BUDGET / scen.length));
+    depth = Math.min(depth, r.maxPly);
+    gradeOptions(r.opts);
+    return r.opts;
   });
   const keys = per[0].map(optKey);
   const options = keys.map(k => {
@@ -955,7 +1090,7 @@ function solveRead(spec, tp) {
   });
   const maxEv = Math.max(...options.map(o => o.ev));
   for (const o of options) o.grade = o.ev >= maxEv - 0.05 ? 'best' : o.ev >= maxEv - 0.15 ? 'slow' : 'loss';
-  return { mode: 'read', level: spec.level, board, life, tapped, hand: [hand[0], []], lands, hc, scen, probs, maxPly: L.maxPly, maxEv, opts: options };
+  return { mode: 'read', level: spec.level, board, life, tapped, hand: [hand[0], []], lands, hc, scen, probs, maxPly: depth, maxEv, opts: options };
 }
 
 function randBoard(L) {
@@ -1039,9 +1174,9 @@ function generate(levelName, budgetMs = 20000) {
 
 // ---------- 読みモード（相手の手札1枚が候補のどれか・均等） ----------
 const READ_LEVELS = {
-  easy:   { me: [2, 2], op: [1, 2], life: [2, 8],  flyP: 0.2, tapP: 0.15, handP: [0.35, 0], creatureP: [0.2, 0.25], kwP: 0.25, kwMax: 1, nCards: 1, maxPly: 10, trickPly: 10 },
-  normal: { me: [2, 3], op: [1, 2], life: [2, 9],  flyP: 0.2, tapP: 0.2,  handP: [0.5, 0],  creatureP: [0.25, 0.3], kwP: 0.4,  kwMax: 2, nCards: 2, maxPly: 10, trickPly: 10, swap: true },
-  hard:   { me: [2, 3], op: [2, 3], life: [3, 10], flyP: 0.2, tapP: 0.25, handP: [0.5, 0],  creatureP: [0.3, 0.3],  kwP: 0.5,  kwMax: 2, nCards: 3, maxPly: 10, trickPly: 10, maxTotal: 5 },
+  easy:   { me: [2, 2], op: [1, 2], life: [2, 8],  flyP: 0.2, tapP: 0.15, handP: [0.35, 0], creatureP: [0.2, 0.25], kwP: 0.25, kwMax: 1, nCards: 1, maxPly: 60, trickPly: 60 },
+  normal: { me: [2, 3], op: [1, 2], life: [2, 9],  flyP: 0.2, tapP: 0.2,  handP: [0.5, 0],  creatureP: [0.25, 0.3], kwP: 0.4,  kwMax: 2, nCards: 2, maxPly: 60, trickPly: 60, swap: true },
+  hard:   { me: [2, 3], op: [2, 3], life: [3, 10], flyP: 0.2, tapP: 0.25, handP: [0.5, 0],  creatureP: [0.3, 0.3],  kwP: 0.5,  kwMax: 2, nCards: 3, maxPly: 60, trickPly: 60, maxTotal: 5 },
 };
 function scoreOf(c) { return c.cls === 'win' ? 1 : c.cls === 'loss' ? 0 : 0.5; }
 
