@@ -326,9 +326,9 @@ function gradeOptions(opts) {
 }
 
 const LEVELS = {
-  easy:   { me: [2, 3], op: [1, 2], maxPly: 8,  life: [2, 8],  flyP: 0.25, tapP: 0.15, kwP: 0.3,  kwMax: 1 },
-  normal: { me: [2, 3], op: [2, 3], maxPly: 10, life: [2, 12], flyP: 0.2,  tapP: 0.25, kwP: 0.45, kwMax: 2 },
-  hard:   { me: [3, 4], op: [2, 4], maxPly: 10, life: [3, 14], flyP: 0.2,  tapP: 0.3,  kwP: 0.55, kwMax: 2, maxTotal: 6 },
+  easy:   { me: [2, 3], op: [1, 2], maxPly: 20,  life: [2, 8],  flyP: 0.25, tapP: 0.15, kwP: 0.3,  kwMax: 1 },
+  normal: { me: [2, 3], op: [2, 3], maxPly: 20, life: [2, 12], flyP: 0.2,  tapP: 0.25, kwP: 0.45, kwMax: 2 },
+  hard:   { me: [3, 4], op: [2, 4], maxPly: 20, life: [3, 14], flyP: 0.2,  tapP: 0.3,  kwP: 0.55, kwMax: 2, maxTotal: 6 },
 };
 
 function rint(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
@@ -374,7 +374,7 @@ function tryPuzzle(levelName) {
     if (!opts.some(o => o.grade === 'loss')) return null;
   }
   return { level: levelName, board, st, best: bc, maxPly: L.maxPly,
-    opts: opts.map(o => ({ attackers: o.attackers, value: o.value, grade: o.grade, c: o.c, line: solver.line(st, 0, o.attackers, 12) })) };
+    opts: opts.map(o => ({ attackers: o.attackers, value: o.value, grade: o.grade, c: o.c, line: solver.line(st, 0, o.attackers, L.maxPly) })) };
 }
 
 function generate(levelName, budgetMs = 4000) {
@@ -391,7 +391,7 @@ function generate(levelName, budgetMs = 4000) {
 // Explain a chosen attack: principal variation
 function explain(puzzle, attackers) {
   const s = makeSolver(puzzle.board, puzzle.maxPly);
-  return s.line(puzzle.st, 0, attackers, 12);
+  return s.line(puzzle.st, 0, attackers, puzzle.maxPly);
 }
 
 if (typeof module !== 'undefined') module.exports = { makeSolver, WIN, classify, gradeOptions, generate, explain, LEVELS };
