@@ -933,7 +933,7 @@ function initialState(board, life, hand, lands, tappedOp) {
 // ルート：自分のターンの攻撃宣言（速攻クリーチャーを戦闘前に唱えるかどうかも含む）
 // budgetMs を指定すると、maxPly まで時間の許すかぎり深く読み直す（最初の深さ BASE_PLY は必ず読み切る）
 const BASE_PLY = 10, DEPTHS2 = [10, 20, 30, 40, 60];
-function rootOptions(board, life, hand, lands, tappedOp, maxPly, tp, hc, budgetMs = 0) {
+function rootOptions(board, life, hand, lands, tappedOp, maxPly, tp, hc, budgetMs = 0, lazy = false) {
   setHandCreatures(board, hc);
   const depths = budgetMs ? DEPTHS2.filter(d => d < maxPly).concat([maxPly]) : [maxPly];
   const solver = makeSolver(depths[0], tp);
@@ -978,8 +978,16 @@ function rootOptions(board, life, hand, lands, tappedOp, maxPly, tp, hc, budgetM
   }
   solver.setDepth(res.depth);
   const opts = res.opts;
-  for (const o of opts) { o.line = o._pre.concat(o._ch.ev, solver.line(o._ch.s)); delete o._ch; delete o._pre; }
-  return { opts, solver, maxPly: res.depth };
+  // 読み筋（解説）。lazy のときは後から lineOf(optKey) で作る（生成を速くするため）
+  const src = new Map(opts.map(o => [optKey(o), { pre: o._pre, ch: o._ch }]));
+  for (const o of opts) { delete o._ch; delete o._pre; }
+  const lineOf = key => {
+    const x = src.get(key);
+    setHandCreatures(board, hc); solver.setDepth(res.depth);   // 別の問題を解いた後でも、この問題の設定に戻す
+    return x.pre.concat(x.ch.ev, solver.line(x.ch.s));
+  };
+  if (!lazy) for (const o of opts) o.line = lineOf(optKey(o));
+  return { opts, solver, maxPly: res.depth, lineOf };
 }
 
 
@@ -1046,7 +1054,7 @@ function vanillaDeep(board, st, maxPly, budgetMs) {
   }
   return opts;
 }
-function solveFdn(spec, tp) {
+function solveFdn(spec, tp, lazy = false) {
   vanillaCache.clear();
   const L = LEVELS[spec.level];
   const { board, life, hand, lands, tapped } = spec;
@@ -1057,27 +1065,30 @@ function solveFdn(spec, tp) {
   const nbest = Math.max(...naive.map(o => o.value));
   const naiveBest = naive.filter(o => o.value === nbest).map(o => o.attackers);
   // tp あり：手札を tp ターンだけ考える速い近似（生成時のふるい）。なし：最大 L.maxPly まで時間の許すかぎり深く
-  const r = tp ? rootOptions(board, life, hand, lands, tapped, BASE_PLY, tp, hc)
-               : rootOptions(board, life, hand, lands, tapped, L.maxPly, undefined, hc, SOLVE_BUDGET);
+  const r = tp ? rootOptions(board, life, hand, lands, tapped, BASE_PLY, tp, hc, 0, true)
+               : rootOptions(board, life, hand, lands, tapped, L.maxPly, undefined, hc, SOLVE_BUDGET, lazy);
   const opts = r.opts;
   const bc = gradeOptions(opts);
-  return {
+  const p = {
     mode: 'fdn', level: spec.level, board, life, hand, lands, tapped, hc, maxPly: r.maxPly, best: bc, naiveBest,
     opts: opts.map(o => ({ cast: o.cast, attackers: o.attackers, value: o.value, grade: o.grade, c: o.c, line: o.line })),
   };
+  if (lazy) p.lineFn = r.lineOf;   // 読み筋を後から作る関数（ワーカー内だけで使う）
+  return p;
 }
 
-function solveRead(spec, tp) {
+function solveRead(spec, tp, lazy = false) {
   vanillaCache.clear();
   const L = READ_LEVELS[spec.level];
   const { board, life, hand, lands, tapped, scen } = spec;
   const hc = spec.hc || [];
   const probs = scen.map(() => 100 / scen.length); // 候補は均等確率
   let depth = Infinity;
+  const lineOfs = [];
   const per = scen.map(h => {
-    const r = tp ? rootOptions(board, life, [hand[0], h ? [h] : []], lands, tapped, BASE_PLY, tp, hc)
-                 : rootOptions(board, life, [hand[0], h ? [h] : []], lands, tapped, L.maxPly, undefined, hc, Math.round(SOLVE_BUDGET / scen.length));
-    depth = Math.min(depth, r.maxPly);
+    const r = tp ? rootOptions(board, life, [hand[0], h ? [h] : []], lands, tapped, BASE_PLY, tp, hc, 0, true)
+                 : rootOptions(board, life, [hand[0], h ? [h] : []], lands, tapped, L.maxPly, undefined, hc, Math.round(SOLVE_BUDGET / scen.length), lazy);
+    depth = Math.min(depth, r.maxPly); lineOfs.push(r.lineOf);
     gradeOptions(r.opts);
     return r.opts;
   });
@@ -1090,7 +1101,9 @@ function solveRead(spec, tp) {
   });
   const maxEv = Math.max(...options.map(o => o.ev));
   for (const o of options) o.grade = o.ev >= maxEv - 0.05 ? 'best' : o.ev >= maxEv - 0.15 ? 'slow' : 'loss';
-  return { mode: 'read', level: spec.level, board, life, tapped, hand: [hand[0], []], lands, hc, scen, probs, maxPly: depth, maxEv, opts: options };
+  const p = { mode: 'read', level: spec.level, board, life, tapped, hand: [hand[0], []], lands, hc, scen, probs, maxPly: depth, maxEv, opts: options };
+  if (lazy) p.lineFn = (key, si) => lineOfs[si](key);
+  return p;
 }
 
 function randBoard(L) {
@@ -1131,7 +1144,7 @@ function randMyHand(L, hc) {
 }
 
 // ---------- 生成（ランダム盤面 → 解く → フィルタ） ----------
-function tryPuzzle(levelName) {
+function tryPuzzle(levelName, lazy = false) {
   const L = LEVELS[levelName];
   const { board, tapped } = randBoard(L);
   const hc = [];
@@ -1150,7 +1163,7 @@ function tryPuzzle(levelName) {
   for (const tp of [PRE_TRICK, 0]) {
     let p;
     deadline = Date.now() + (tp ? 15000 : 30000);
-    try { p = solveFdn(spec, tp); }
+    try { p = solveFdn(spec, tp, lazy); }
     catch (e) { if (e === ABORT) return null; throw e; } finally { deadline = 0; }
     if (!fdnOK(p)) return null;
     if (!tp) return p;
@@ -1166,9 +1179,9 @@ function fdnOK(p) {
   return opts.some(o => !o.cast && nb.includes(o.attackers.join()) && o.grade !== 'best');
 }
 
-function generate(levelName, budgetMs = 20000) {
+function generate(levelName, budgetMs = 20000, lazy = false) {
   const t0 = Date.now(); let tries = 0;
-  while (Date.now() - t0 < budgetMs) { tries++; const p = tryPuzzle(levelName); if (p) { p.tries = tries; p.ms = Date.now() - t0; return p; } }
+  while (Date.now() - t0 < budgetMs) { tries++; const p = tryPuzzle(levelName, lazy); if (p) { p.tries = tries; p.ms = Date.now() - t0; return p; } }
   return null;
 }
 
@@ -1180,7 +1193,7 @@ const READ_LEVELS = {
 };
 function scoreOf(c) { return c.cls === 'win' ? 1 : c.cls === 'loss' ? 0 : 0.5; }
 
-function tryRead(levelName) {
+function tryRead(levelName, lazy = false) {
   const L = READ_LEVELS[levelName];
   const { board, tapped } = randBoard(L);
   const life = [rint(L.life[0], L.life[1]), rint(L.life[0], L.life[1])];
@@ -1209,7 +1222,7 @@ function tryRead(levelName) {
   for (const tp of [PRE_TRICK, 0]) {
     let p;
     deadline = Date.now() + (tp ? 25000 : 60000);
-    try { p = solveRead(spec, tp); }
+    try { p = solveRead(spec, tp, lazy); }
     catch (e) { if (e === ABORT) return null; throw e; } finally { deadline = 0; }
     if (!readOK(p, scen)) return null;
     if (!tp) return p;
@@ -1225,9 +1238,9 @@ function readOK(p, scen) {
   if (options.some(o => bestSets.every(s => s.has(optKey(o))))) return false;
   return options.filter(o => o.grade === 'best').length / options.length <= 0.5;
 }
-function generateRead(levelName, budgetMs = 30000) {
+function generateRead(levelName, budgetMs = 30000, lazy = false) {
   const t0 = Date.now(); let tries = 0;
-  while (Date.now() - t0 < budgetMs) { tries++; const p = tryRead(levelName); if (p) { p.tries = tries; p.ms = Date.now() - t0; return p; } }
+  while (Date.now() - t0 < budgetMs) { tries++; const p = tryRead(levelName, lazy); if (p) { p.tries = tries; p.ms = Date.now() - t0; return p; } }
   return null;
 }
 
