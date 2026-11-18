@@ -443,7 +443,8 @@ function kwGlossary() {
 }
 function creText(id) {
   const d = hcd(id);
-  const base = d.haste ? '速攻：戦場に出たターンから攻撃できる。自分のメインフェイズに唱える（戦闘前に出すかは「戦闘前に唱える」ボタンで選ぶ）'
+  const base = d.haste ? (d.side === 0 ? '速攻：戦場に出たターンから攻撃できる。自分のメインフェイズに唱える（戦闘前に出すかは「戦闘前に唱える」ボタンで選ぶ）'
+      : '速攻：戦場に出たターンから攻撃できる。相手は自分のターンのメインフェイズに唱えて、そのターンから攻撃してくる')
     : '瞬速：インスタントと同じタイミングで唱えられる（相手の攻撃中に出してブロック、など）。出たターンは攻撃できない';
   const k = kwList(d).filter(x => x !== '速攻');
   return base + (k.length ? '<br>' + k.map(l => `${l}：${KW_DESC[l.startsWith('護法') ? '護法' : l]}`).join('<br>') : '');
@@ -626,11 +627,15 @@ function render() {
   if (scrollToLine) { scrollToLine = false; const el = document.getElementById('lineSec'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 }
 
+// 手札を無視して解くと正解を外す問題か（本当の最善手が、手札を無視したときの最善手に含まれない）
+function naiveMisleads(P) {
+  return !P.opts.some(o => o.grade === 'best' && !o.cast && P.naiveBest.some(a => sameSet(a, o.attackers)));
+}
 function firstCast(line, side) { return line ? line.find(e => e.t === 'cast' && e.by === side && e.tg.length) : null; }
 function tgPlain(t) { return t[0] === 'P' ? sideName(t[1]) : NM[t[0]][t[1]]; }
 function insight(you, bests) {
   const b = bests[0], P = puzzle, msgs = [];
-  const isNaive = !you.cast && P.naiveBest.some(a => sameSet(a, you.attackers));
+  const isNaive = naiveMisleads(P) && !you.cast && P.naiveBest.some(a => sameSet(a, you.attackers));
   if (you.grade !== 'best') {
     if (isNaive && P.mode === 'fdn') msgs.push('<b>手札を考えなければ正解に見える手</b>です。');
     const oc = firstCast(you.line, 1);
@@ -664,7 +669,7 @@ function resultHtml() {
   const yi = P.opts.indexOf(you), bi = P.opts.indexOf(bests[0]);
   if (viewIdx < 0) viewIdx = yi;
   const sorted = P.opts.slice().sort((a, b) => b.value - a.value);
-  const isNaive = o => P.mode === 'fdn' && !o.cast && P.naiveBest.some(a => sameSet(a, o.attackers));
+  const isNaive = o => P.mode === 'fdn' && naiveMisleads(P) && !o.cast && P.naiveBest.some(a => sameSet(a, o.attackers));
   const vo = P.opts[viewIdx];
   return `<div class="result">
     <div class="verdict ${vc}"><div class="big">${big}</div>
