@@ -202,6 +202,7 @@ function makeSolver(board, maxPly, deadline = 0) {
   // alpha-beta with transposition table. value from 自分's perspective.
   // 局面の値 ＝「攻撃しない」と「いずれかで攻撃する」の良いほう。
   // 相手が攻撃しなかった直後（st.pp）にこちらも攻撃しないと、同じ局面のくり返し（にらみ合い）として決着つかず。
+  // 同じ局面では同じ判断をする前提なので、問題の選択肢として選んだ最初の「攻撃しない」も数える。
   function value(st, ply, alpha = -Infinity, beta = Infinity) {
     if (st.life[1] <= 0) return WIN - ply;
     if (st.life[0] <= 0) return -WIN + ply;
@@ -258,8 +259,6 @@ function makeSolver(board, maxPly, deadline = 0) {
     let a = alpha, b = beta;
     forEachBlock(st, attackers, (avail, assign) => {
       const outs = resolve(st, attackers, avail, assign);
-      // 最初の一手（問題の選択肢）は自由に選んだ手ではないので、「攻撃しない」でもにらみ合いの判定に数えない
-      if (ply === 0) outs.forEach(o => { o.pp = false; });
       let ov = maxer ? -Infinity : Infinity;
       let a2 = a, b2 = b;
       for (const o of outs) {
@@ -304,10 +303,8 @@ function makeSolver(board, maxPly, deadline = 0) {
       }
       const maxer = cur.turn === 0;
       let worst = maxer ? Infinity : -Infinity, pick = null;
-      const forced = p === ply && attackers;
       forEachBlock(cur, atk, (avail, assign) => {
         const outs = resolve(cur, atk, avail, assign);
-        if (forced) outs.forEach(o => { o.pp = false; });
         let ov = maxer ? -Infinity : Infinity, oo = null;
         for (const o of outs) {
           const v = value(o, p + 1);

@@ -550,6 +550,7 @@ function makeSolver(board, maxPly, deadline = 0) {
   // alpha-beta with transposition table. value from 自分's perspective.
   // 局面の値 ＝「攻撃しない」と「いずれかで攻撃する」の良いほう。
   // 相手が攻撃しなかった直後（st.pp）にこちらも攻撃しないと、同じ局面のくり返し（にらみ合い）として決着つかず。
+  // 同じ局面では同じ判断をする前提なので、問題の選択肢として選んだ最初の「攻撃しない」も数える。
   function value(st, ply, alpha = -Infinity, beta = Infinity) {
     if (st.life[1] <= 0) return WIN - ply;
     if (st.life[0] <= 0) return -WIN + ply;
@@ -606,8 +607,6 @@ function makeSolver(board, maxPly, deadline = 0) {
     let a = alpha, b = beta;
     forEachBlock(st, attackers, (avail, assign) => {
       const outs = resolve(st, attackers, avail, assign);
-      // 最初の一手（問題の選択肢）は自由に選んだ手ではないので、「攻撃しない」でもにらみ合いの判定に数えない
-      if (ply === 0) outs.forEach(o => { o.pp = false; });
       let ov = maxer ? -Infinity : Infinity;
       let a2 = a, b2 = b;
       for (const o of outs) {
@@ -652,10 +651,8 @@ function makeSolver(board, maxPly, deadline = 0) {
       }
       const maxer = cur.turn === 0;
       let worst = maxer ? Infinity : -Infinity, pick = null;
-      const forced = p === ply && attackers;
       forEachBlock(cur, atk, (avail, assign) => {
         const outs = resolve(cur, atk, avail, assign);
-        if (forced) outs.forEach(o => { o.pp = false; });
         let ov = maxer ? -Infinity : Infinity, oo = null;
         for (const o of outs) {
           const v = value(o, p + 1);
@@ -2368,7 +2365,7 @@ function render() {
     ・タップ中の相手生物は、前のターンに攻撃してきた生物（今ターンはブロック不可）<br>
     ・飛行は、飛行か到達を持つ生物でしかブロックできない<br>
     ・複数ブロックされたら、攻撃側がダメージを自由に割り振る（現行ルール）<br>
-    ・最大${P.maxPly / 2}往復先まで読んで評価（それより先で決着がつく場合も「決着つかず」として盤面の評価で比べる）
+    ${fdn ? '' : '・お互いに続けて攻撃しなかったら、同じ盤面のくり返し（にらみ合い）として決着つかず（同じ盤面では同じ判断をする前提）<br>'}・最大${P.maxPly / 2}往復先まで読んで評価（それより先で決着がつく場合も「決着つかず」として盤面の評価で比べる）
   </div>
   <div class="zone me">
     <div class="row" id="merow">${B.me.map((c, i) => cardHtml(c, 0, i, (sel.has(i) ? 'attack' : '') + (c.df ? ' dfc' : ''))).join('')}${castSel ? cardHtml(Object.assign({ hs: true }, hcd(castSel)), 0, slotOf(castSel), 'newc' + (sel.has(slotOf(castSel)) ? ' attack' : '')) : ''}</div>
