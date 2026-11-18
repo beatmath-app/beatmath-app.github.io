@@ -415,7 +415,7 @@ function solveDeep(board, st, maxPly, budgetMs = 8000, pre = null) {
   return res;
 }
 
-function tryPuzzle(levelName) {
+function tryPuzzle(levelName, lazy = false) {
   const L = LEVELS[levelName];
   let nm = rint(L.me[0], L.me[1]), no = rint(L.op[0], L.op[1]);
   if (L.maxTotal && nm + no > L.maxTotal) { if (Math.random() < 0.5) nm--; else no--; }
@@ -438,8 +438,11 @@ function tryPuzzle(levelName) {
   const { solver, opts, maxPly } = solveDeep(board, st, L.maxPly, 8000, { solver: s20, opts: pre });
   if (!basicOK(opts, board, r)) return null;
   const bc = gradeOptions(opts);
-  return { level: levelName, board, st, best: bc, maxPly,
-    opts: opts.map(o => ({ attackers: o.attackers, value: o.value, grade: o.grade, c: o.c, line: solver.line(st, 0, o.attackers, maxPly, 1000) })) };
+  const lineFn = attackers => solver.line(st, 0, attackers, maxPly, 1000);
+  const p = { level: levelName, board, st, best: bc, maxPly,
+    opts: opts.map(o => ({ attackers: o.attackers, value: o.value, grade: o.grade, c: o.c, line: lazy ? undefined : lineFn(o.attackers) })) };
+  if (lazy) p.lineFn = lineFn;   // 読み筋を後から作る関数（ワーカー内だけで使う）
+  return p;
 }
 function basicOK(opts, board, r) {
   const bc = gradeOptions(opts);
@@ -463,12 +466,12 @@ function basicOK(opts, board, r) {
   return true;
 }
 
-function generate(levelName, budgetMs = 4000) {
+function generate(levelName, budgetMs = 4000, lazy = false) {
   const t0 = Date.now();
   let tries = 0;
   while (Date.now() - t0 < budgetMs) {
     tries++;
-    const p = tryPuzzle(levelName);
+    const p = tryPuzzle(levelName, lazy);
     if (p) { p.tries = tries; return p; }
   }
   return false;

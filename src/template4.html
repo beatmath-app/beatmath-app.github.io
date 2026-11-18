@@ -174,7 +174,7 @@ function v1ToEvents(steps){
 function conv(v){ return v>=900? v+1 : v<=-900? v-1 : v; }
 function basicPuzzle(level, board, st, maxPly, opts){
   const p = { mode:'basic', level, board, life:st.life.slice(), tapped:st.tapped, hand:[[],[]], lands:[0,0], hc:[], maxPly, naiveBest:[],
-    opts: opts.map(o=>{ const v=conv(o.value); return { cast:null, attackers:o.attackers, value:v, grade:o.grade, c:V2.classify(v), line:v1ToEvents(o.line) }; }) };
+    opts: opts.map(o=>{ const v=conv(o.value); return { cast:null, attackers:o.attackers, value:v, grade:o.grade, c:V2.classify(v), line:o.line ? v1ToEvents(o.line) : undefined }; }) };
   p.best = V2.classify(Math.max(...p.opts.map(o=>o.value)));
   return p;
 }
@@ -182,19 +182,40 @@ function solveBasic(spec){
   const L = V1.LEVELS[spec.level];
   const st = { a:[(1<<spec.board.me.length)-1,(1<<spec.board.op.length)-1], life:spec.life.slice(), turn:0, tapped:spec.tapped };
   const { solver: s, opts, maxPly } = V1.solveDeep(spec.board, st, L.maxPly); V1.gradeOptions(opts);
-  return basicPuzzle(spec.level, spec.board, st, maxPly, opts.map(o=>({attackers:o.attackers,value:o.value,grade:o.grade,line:s.line(st,0,o.attackers,maxPly)})));
+  const p = basicPuzzle(spec.level, spec.board, st, maxPly, opts.map(o=>({attackers:o.attackers,value:o.value,grade:o.grade})));
+  p.lineFn = a => s.line(st,0,a,maxPly);
+  return p;
+}
+// 読み筋（解説）は問題を出してから作る。作り方（lineFn）は問題ごとにここで覚えておく
+const lineMakers = new Map(); let lineTok = 0;
+function keepLines(p){
+  if (!p || !p.lineFn) return p;
+  const tok = ++lineTok; lineMakers.set(tok, { fn: p.lineFn, p });
+  if (lineMakers.size > 3) lineMakers.delete(lineMakers.keys().next().value);
+  delete p.lineFn; p.lineTok = tok;
+  return p;
+}
+const okey = o => (o.cast || '') + ':' + o.attackers.join();
+function makeLines(tok){
+  const m = lineMakers.get(tok); if (!m) return null;
+  lineMakers.delete(tok);
+  const p = m.p;
+  if (p.mode === 'read') return p.opts.map(o => p.scen.map((_, si) => m.fn(okey(o), si)));
+  if (p.mode === 'fdn') return p.opts.map(o => m.fn(okey(o)));
+  return p.opts.map(o => v1ToEvents(m.fn(o.attackers)));
 }
 self.onmessage = function(e){
-  const {id, type, mode, level, spec} = e.data;
+  const {id, type, mode, level, spec, tok} = e.data;
   let p = null;
   try {
+    if (type === 'lines') { self.postMessage({ id, puzzle: makeLines(tok) }); return; }
     if (type === 'solve') {
-      p = mode === 'fdn' ? V2.solveFdn(spec) : mode === 'read' ? V2.solveRead(spec) : solveBasic(spec);
-    } else if (mode === 'fdn') p = V2.generate(level, 60000);
-    else if (mode === 'read') p = V2.generateRead(level, 120000);
-    else { const q = V1.generate(level, 60000); if (q) p = basicPuzzle(level, q.board, q.st, q.maxPly, q.opts); }
+      p = mode === 'fdn' ? V2.solveFdn(spec, 0, true) : mode === 'read' ? V2.solveRead(spec, 0, true) : solveBasic(spec);
+    } else if (mode === 'fdn') p = V2.generate(level, 60000, true);
+    else if (mode === 'read') p = V2.generateRead(level, 120000, true);
+    else { const q = V1.generate(level, 60000, true); if (q) { p = basicPuzzle(level, q.board, q.st, q.maxPly, q.opts); p.lineFn = q.lineFn; } }
   } catch (err) { p = null; }
-  self.postMessage({ id, puzzle: p });
+  self.postMessage({ id, puzzle: keepLines(p) });
 };`;
 const { CARDS, CARD_IDS } = (new Function(`var module;${v2src};return {CARDS, CARD_IDS};`))();
 
@@ -337,6 +358,17 @@ function setPuzzle(p, fresh = true) {
   sel = new Set(); castSel = null; answered = false; viewIdx = -1; viewCell = null; lineOpen = false; showCard = -1;
   setHash(p.id);
   render();
+  requestLines(p);
+}
+// 読み筋（解説）を、問題を出した後に作ってもらう（作り終えたら答え合わせの画面を描き直す）
+function requestLines(p) {
+  if (!p.lineTok) return;
+  const tok = p.lineTok; delete p.lineTok;
+  call({ type: 'lines', tok }).then(ls => {
+    if (!ls) return;
+    p.opts.forEach((o, i) => { if (p.mode === 'read') o.cells.forEach((c, si) => { c.line = ls[i][si]; }); else o.line = ls[i]; });
+    if (puzzle === p && answered) render();
+  });
 }
 function loading(msg) { app.innerHTML = `<div class="loading">${msg}</div>`; }
 async function newPuzzle() {
@@ -358,10 +390,10 @@ async function newPuzzle() {
   const m = mode, l = level;
   if (!next[k(m, l)]) next[k(m, l)] = call({ type: 'gen', mode: m, level: l });
   const p = await next[k(m, l)]; next[k(m, l)] = null;
-  if (tok !== loadToken) return;
-  prefetch(m, l);
-  if (!p) { loading('問題を作れませんでした。もう一度お試しください。'); return; }
+  if (tok !== loadToken) { prefetch(m, l); return; }
+  if (!p) { prefetch(m, l); loading('問題を作れませんでした。もう一度お試しください。'); return; }
   setPuzzle(p);
+  prefetch(m, l);   // 読み筋づくり（setPuzzle で依頼）の後に、次の問題を作る
 }
 async function loadId(id, fresh) {
   const spec = decode(id);
@@ -440,6 +472,7 @@ function castable(side, id) {
 
 // ---------- 展開表示 ----------
 function lineHtml(line, outcome) {
+  if (!line) return '<div class="idle">読み筋を計算中…</div>';
   const P = puzzle;
   const cr = [allCr(0), allCr(1)];
   const nb = [P.board.me.length, P.board.op.length];
@@ -593,7 +626,7 @@ function render() {
   if (scrollToLine) { scrollToLine = false; const el = document.getElementById('lineSec'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 }
 
-function firstCast(line, side) { return line.find(e => e.t === 'cast' && e.by === side && e.tg.length); }
+function firstCast(line, side) { return line ? line.find(e => e.t === 'cast' && e.by === side && e.tg.length) : null; }
 function tgPlain(t) { return t[0] === 'P' ? sideName(t[1]) : NM[t[0]][t[1]]; }
 function insight(you, bests) {
   const b = bests[0], P = puzzle, msgs = [];
