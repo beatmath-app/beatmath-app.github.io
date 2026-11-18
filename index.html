@@ -674,9 +674,9 @@ function gradeOptions(opts) {
 }
 
 const LEVELS = {
-  easy:   { me: [2, 3], op: [1, 2], maxPly: 8,  life: [2, 8],  flyP: 0.25, tapP: 0.15, kwP: 0.3,  kwMax: 1 },
-  normal: { me: [2, 3], op: [2, 3], maxPly: 10, life: [2, 12], flyP: 0.2,  tapP: 0.25, kwP: 0.45, kwMax: 2 },
-  hard:   { me: [3, 4], op: [2, 4], maxPly: 10, life: [3, 14], flyP: 0.2,  tapP: 0.3,  kwP: 0.55, kwMax: 2, maxTotal: 6 },
+  easy:   { me: [2, 3], op: [1, 2], maxPly: 20,  life: [2, 8],  flyP: 0.25, tapP: 0.15, kwP: 0.3,  kwMax: 1 },
+  normal: { me: [2, 3], op: [2, 3], maxPly: 20, life: [2, 12], flyP: 0.2,  tapP: 0.25, kwP: 0.45, kwMax: 2 },
+  hard:   { me: [3, 4], op: [2, 4], maxPly: 20, life: [3, 14], flyP: 0.2,  tapP: 0.3,  kwP: 0.55, kwMax: 2, maxTotal: 6 },
 };
 
 function rint(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
@@ -722,7 +722,7 @@ function tryPuzzle(levelName) {
     if (!opts.some(o => o.grade === 'loss')) return null;
   }
   return { level: levelName, board, st, best: bc, maxPly: L.maxPly,
-    opts: opts.map(o => ({ attackers: o.attackers, value: o.value, grade: o.grade, c: o.c, line: solver.line(st, 0, o.attackers, 12) })) };
+    opts: opts.map(o => ({ attackers: o.attackers, value: o.value, grade: o.grade, c: o.c, line: solver.line(st, 0, o.attackers, L.maxPly) })) };
 }
 
 function generate(levelName, budgetMs = 4000) {
@@ -739,7 +739,7 @@ function generate(levelName, budgetMs = 4000) {
 // Explain a chosen attack: principal variation
 function explain(puzzle, attackers) {
   const s = makeSolver(puzzle.board, puzzle.maxPly);
-  return s.line(puzzle.st, 0, attackers, 12);
+  return s.line(puzzle.st, 0, attackers, puzzle.maxPly);
 }
 
 if (typeof module !== 'undefined') module.exports = { makeSolver, WIN, classify, gradeOptions, generate, explain, LEVELS };
@@ -1887,7 +1887,7 @@ function solveBasic(spec){
   const s = V1.makeSolver(spec.board, L.maxPly);
   const st = { a:[(1<<spec.board.me.length)-1,(1<<spec.board.op.length)-1], life:spec.life.slice(), turn:0, tapped:spec.tapped };
   const opts = s.rootOptions(st); V1.gradeOptions(opts);
-  return basicPuzzle(spec.level, spec.board, st, L.maxPly, opts.map(o=>({attackers:o.attackers,value:o.value,grade:o.grade,line:s.line(st,0,o.attackers,12)})));
+  return basicPuzzle(spec.level, spec.board, st, L.maxPly, opts.map(o=>({attackers:o.attackers,value:o.value,grade:o.grade,line:s.line(st,0,o.attackers,L.maxPly)})));
 }
 self.onmessage = function(e){
   const {id, type, mode, level, spec} = e.data;
@@ -1897,7 +1897,7 @@ self.onmessage = function(e){
       p = mode === 'fdn' ? V2.solveFdn(spec) : mode === 'read' ? V2.solveRead(spec) : solveBasic(spec);
     } else if (mode === 'fdn') p = V2.generate(level, 60000);
     else if (mode === 'read') p = V2.generateRead(level, 120000);
-    else { const q = V1.generate(level, 20000); if (q) p = basicPuzzle(level, q.board, q.st, q.maxPly, q.opts); }
+    else { const q = V1.generate(level, 60000); if (q) p = basicPuzzle(level, q.board, q.st, q.maxPly, q.opts); }
   } catch (err) { p = null; }
   self.postMessage({ id, puzzle: p });
 };`;
@@ -2132,7 +2132,7 @@ const optMatch = (o, cast, mine) => (o.cast || null) === (cast || null) && sameS
 function outLabel(c) {
   if (c.cls === 'win') return c.mine ? (c.n === 1 ? 'このターンで勝ち' : `自分の${c.n}ターン目に勝ち`) : `相手の${c.n}ターン目中に勝ち`;
   if (c.cls === 'loss') return c.mine ? `自分の${c.n}ターン目中に負け` : `相手の${c.n}ターン目に負け`;
-  return `${puzzle.maxPly / 2}往復で決着つかず`;
+  return `${puzzle.maxPly / 2}往復以内には決着つかず`;
 }
 const MARK = { best: '◎', slow: '○', open: '△', loss: '×' };
 const sameSet = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
@@ -2211,7 +2211,7 @@ function lineHtml(line, outcome) {
   flushIdle();
   if (outcome.cls === 'win') html += `<div class="end win">→ 相手のライフが0に。勝ち！</div>`;
   else if (outcome.cls === 'loss') html += `<div class="end loss">→ あなたのライフが0に。負け</div>`;
-  else html += `<div class="end open">→ ${puzzle.maxPly / 2}往復では決着つかず（盤面の評価で比較）</div>`;
+  else html += `<div class="end open">→ ${puzzle.maxPly / 2}往復以内には決着つかず（その時点の盤面の評価で比較）</div>`;
   return html;
 }
 
@@ -2278,7 +2278,7 @@ function render() {
     ・タップ中の相手生物は、前のターンに攻撃してきた生物（今ターンはブロック不可）<br>
     ・飛行は、飛行か到達を持つ生物でしかブロックできない<br>
     ・複数ブロックされたら、攻撃側がダメージを自由に割り振る（現行ルール）<br>
-    ・最大${P.maxPly / 2}往復先まで読んで評価${fdn ? '（あなたの3ターン目以降は、残った手札を考慮しない近似）' : ''}
+    ・最大${P.maxPly / 2}往復先まで読んで評価（それより先で決着がつく場合も「決着つかず」として盤面の評価で比べる）
   </div>
   <div class="zone me">
     <div class="row" id="merow">${B.me.map((c, i) => cardHtml(c, 0, i, (sel.has(i) ? 'attack' : '') + (c.df ? ' dfc' : ''))).join('')}${castSel ? cardHtml(Object.assign({ hs: true }, hcd(castSel)), 0, slotOf(castSel), 'newc' + (sel.has(slotOf(castSel)) ? ' attack' : '')) : ''}</div>
@@ -2362,7 +2362,7 @@ function caseSummary(o) {
   o.cells.forEach((c, i) => g[c.c.cls].push(scenShort(P.scen[i])));
   const parts = [];
   if (g.win.length) parts.push(`${g.win.join('・')}なら<b>勝ち</b>`);
-  if (g.open.length) parts.push(`${g.open.join('・')}なら<b>決着つかず</b>`);
+  if (g.open.length) parts.push(`${g.open.join('・')}なら<b>${P.maxPly / 2}往復以内には決着つかず</b>`);
   if (g.loss.length) parts.push(`${g.loss.join('・')}なら<b>負け</b>`);
   return parts.join('、');
 }
