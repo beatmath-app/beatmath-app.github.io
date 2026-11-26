@@ -1099,8 +1099,7 @@ function solveRead(spec, tp, lazy = false) {
     const o0 = per[0].find(o => optKey(o) === k);
     return { cast: o0.cast, attackers: o0.attackers, cells, ev: Math.round(ev * 1000) / 1000 };
   });
-  const maxEv = Math.max(...options.map(o => o.ev));
-  for (const o of options) o.grade = o.ev >= maxEv - 0.05 ? 'best' : o.ev >= maxEv - 0.15 ? 'slow' : 'loss';
+  const maxEv = gradeRead(options);
   const p = { mode: 'read', level: spec.level, board, life, tapped, hand: [hand[0], []], lands, hc, scen, probs, maxPly: depth, maxEv, opts: options };
   if (lazy) p.lineFn = (key, si) => lineOfs[si](key);
   return p;
@@ -1192,6 +1191,18 @@ const READ_LEVELS = {
   hard:   { me: [2, 3], op: [2, 3], life: [3, 10], flyP: 0.2, tapP: 0.25, handP: [0.5, 0],  creatureP: [0.3, 0.3],  kwP: 0.5,  kwMax: 2, nCards: 3, maxPly: 60, trickPly: 60, maxTotal: 5 },
 };
 function scoreOf(c) { return c.cls === 'win' ? 1 : c.cls === 'loss' ? 0 : 0.5; }
+// どの候補でも一度も勝てない手（決着つかず・負けだけ）は、期待値が高くても正解にしない
+const canWin = o => o.cells.some(c => c.c.cls === 'win');
+function gradeRead(options) {
+  const elig = options.filter(canWin);
+  const pool = elig.length ? elig : options;   // どの手も勝てない（古い問題IDの復元だけで起こる）ときは期待値だけで比べる
+  const maxEv = Math.max(...pool.map(o => o.ev));
+  for (const o of options) {
+    const ok = !elig.length || canWin(o);
+    o.grade = ok && o.ev >= maxEv - 0.05 ? 'best' : ok && o.ev >= maxEv - 0.15 ? 'slow' : 'loss';
+  }
+  return maxEv;
+}
 
 function tryRead(levelName, lazy = false) {
   const L = READ_LEVELS[levelName];
@@ -1231,7 +1242,8 @@ function tryRead(levelName, lazy = false) {
 function readOK(p, scen) {
   const options = p.opts;
   if (options.length < 2) return false;
-  const evs = options.map(o => o.ev), maxEv = Math.max(...evs), minEv = Math.min(...evs);
+  if (!options.some(canWin)) return false;               // どの手でも勝てない
+  const maxEv = gradeRead(options), minEv = Math.min(...options.map(o => o.ev));
   if (maxEv < 0.3 || maxEv - minEv < 0.25) return false;
   // 候補ごとに「結果が最善の手」が割れていること（全候補で最善になる手がない）
   const bestSets = scen.map((_, i) => { const m = Math.max(...options.map(o => o.cells[i].score)); return new Set(options.filter(o => o.cells[i].score === m).map(optKey)); });
@@ -1244,4 +1256,4 @@ function generateRead(levelName, budgetMs = 30000, lazy = false) {
   return null;
 }
 
-if (typeof module !== 'undefined') module.exports = { CARDS, CARD_IDS, makeSolver, initialState, advance, rootOptions, WIN, P, T, classify, gradeOptions, generate, generateRead, solveFdn, solveRead, LEVELS, READ_LEVELS, _t: { resolveSpell, castOptions, combatDamage, sba, clone, newCreature, setHandCreatures, makeVanilla, ccCombat, setNoVanilla: v => { disableVanilla = v; }, readOK, fdnOK } };
+if (typeof module !== 'undefined') module.exports = { CARDS, CARD_IDS, makeSolver, initialState, advance, rootOptions, WIN, P, T, classify, gradeOptions, generate, generateRead, solveFdn, solveRead, LEVELS, READ_LEVELS, _t: { gradeRead, canWin, resolveSpell, castOptions, combatDamage, sba, clone, newCreature, setHandCreatures, makeVanilla, ccCombat, setNoVanilla: v => { disableVanilla = v; }, readOK, fdnOK } };

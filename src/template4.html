@@ -599,6 +599,7 @@ function render() {
     ・「基本土地」はインスタントを持っていないケース。<b>次の相手のメインフェイズに土地を出しても、唱えられる呪文は増えない</b><br>
     ・<b>攻撃を宣言したら、お互いの手札が分かったもの</b>として、双方が最善を尽くす<br>
     ・評価は<b>勝率</b>：勝ち＝1、負け＝0、決着つかず＝0.5 を候補で平均<br>
+    ・ただし、どの候補でも<b>一度も勝てない手</b>（決着つかず・負けだけ）は、勝率が高くても正解にしない<br>
     ・マナは土地の枚数だけで判断（色は足りている）。新しいカードは引かない<br>` : fdn ? `・手札は<b>公開</b>。お互い<b>最適なタイミング</b>で使う／使わない（AIが双方を担当）<br>
     ・マナは土地の枚数だけで判断（色は足りている）。お互い新しいカードは引かない（《一瞬の散漫》のドローも無視）<br>
     ・戦闘前に唱えるインスタントは「前のターンの終了時に唱えた」ものとして扱う<br>` : '・お互いに<b>新しいカードは出さない</b>／トリックなし（盤面だけの殴り合い）<br>'}
@@ -703,7 +704,7 @@ function readResultHtml() {
   const mine = [...sel].sort((a, b) => a - b);
   const you = P.opts.find(o => optMatch(o, castSel, mine));
   const bests = P.opts.filter(o => o.grade === 'best');
-  const top = P.opts.slice().sort((a, b) => b.ev - a.ev)[0];
+  const top = bests.slice().sort((a, b) => b.ev - a.ev)[0];
   const { vc, big } = verdictHead(you);
   const yi = P.opts.indexOf(you);
   if (!viewCell) {
@@ -712,8 +713,10 @@ function readResultHtml() {
     viewCell = [yi, si];
   }
   const [vo, vs] = viewCell;
-  const sorted = P.opts.slice().sort((a, b) => b.ev - a.ev);
+  const GR = { best: 0, slow: 1, loss: 2 };
+  const sorted = P.opts.slice().sort((a, b) => GR[a.grade] - GR[b.grade] || b.ev - a.ev);
   let hint = `あなたの攻撃は、相手が${caseSummary(you)}。`;
+  if (!you.cells.some(c => c.c.cls === 'win')) hint += `<br>どの候補でも<b>一度も勝てない</b>ので、期待値が高くても正解にはなりません。`;
   if (you.grade !== 'best') hint += `<br>最善手（${optLabel(top)}）は、${caseSummary(top)}。`;
   const vopt = P.opts[vo], cell = vopt.cells[vs];
   return `<div class="result">
@@ -727,7 +730,7 @@ function readResultHtml() {
       const oi = P.opts.indexOf(o);
       return `<tr class="${o === you ? 'you' : ''}"><td><span class="mk" style="color:${o.grade === 'best' ? 'var(--good)' : o.grade === 'slow' ? 'var(--warn)' : 'var(--bad)'}">${MARK[o.grade]}</span>${optShort(o)}${o === you ? '<span class="tag you">あなた</span>' : ''}</td>${o.cells.map((c, si) => `<td><span class="cell ${cellCls(c.c)} ${lineOpen && oi === vo && si === vs ? 'sel' : ''}" data-cell="${oi},${si}">${cellTxt(c.c)}${c.c.n ? `<small>${c.c.mine ? '自' : '敵'}${c.c.n}T</small>` : ''}</span></td>`).join('')}<td>${pct(o.ev)}</td></tr>`;
     }).join('')}</tbody></table>
-    <div class="hint">◎最善（勝率の差5%以内） ○惜しい（15%以内） ×不正解／勝＝勝ち 負＝負け 分＝決着つかず（小さい数字は決着するターン）</div>
+    <div class="hint">◎最善（勝てる手の中で勝率の差5%以内） ○惜しい（15%以内） ×不正解（一度も勝てない手を含む）／勝＝勝ち 負＝負け 分＝決着つかず（小さい数字は決着するターン）</div>
     ${lineSection(`${optLabel(vopt)} × 相手が${scenShort(P.scen[vs])}`, `<div class="line">${lineHtml(cell.line, cell.c)}</div>`)}
     ${shareHtml()}
     ${nextButtons()}
@@ -758,7 +761,7 @@ function puzzleText(withAnswer) {
   if (withAnswer) {
     const bests = P.opts.filter(o => o.grade === 'best');
     if (P.mode === 'read') {
-      const top = P.opts.slice().sort((a, b) => b.ev - a.ev)[0];
+      const top = bests.slice().sort((a, b) => b.ev - a.ev)[0];
       L.push('', `A. ${bests.map(optLabel).join(' / ')}（勝率${pct(top.ev)}）`);
       L.push(`　${caseSummary(top).replace(/<[^>]+>/g, '')}`);
     } else L.push('', `A. ${bests.map(optLabel).join(' / ')} → ${outLabel(bests[0].c)}`);
