@@ -100,6 +100,37 @@
 header h1.logo{display:flex;align-items:center;gap:8px;margin:0;line-height:0}
 .logo-emblem{width:42px;height:42px;flex:none}
 .logo-word{width:83px;height:46px;flex:none}
+/* ---- 称号バナー ---- */
+.tools button{font-size:12px;white-space:nowrap}
+.tools .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--bad);margin-left:2px;vertical-align:top}
+.bn{position:relative;line-height:0}
+.bn img{width:100%;height:auto;display:block;filter:drop-shadow(0 4px 10px #000a)}
+.bn .shine{position:absolute;inset:0;-webkit-mask-size:100% 100%;mask-size:100% 100%;background:linear-gradient(115deg,transparent 40%,#ffffff70 50%,transparent 60%);background-size:300% 100%;animation:shine 3.4s ease-in-out infinite;pointer-events:none;mix-blend-mode:overlay}
+@keyframes shine{0%{background-position:130% 0}55%,100%{background-position:-30% 0}}
+.bn.lock img{filter:brightness(0) invert(.24);opacity:.9}
+.bn .q{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:22px;color:#ffffff40;line-height:1;letter-spacing:.2em}
+.bn.noimg{line-height:1.3;aspect-ratio:2.7;border-radius:14px;border:2px solid var(--line);background:linear-gradient(120deg,#252a3d,#1a1d29);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px}
+.bn.noimg img,.bn.noimg .shine{display:none}
+.bn .new{position:absolute;top:2px;left:4px;background:var(--bad);color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;line-height:1.3;z-index:2}
+.blist{display:flex;flex-direction:column;gap:14px;margin:12px 0 6px}
+.bcap{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;color:var(--sub);margin-top:4px;padding:0 6px}
+.bcap .cd{font-weight:800;color:var(--gold)}
+.bcap .fl{font-style:italic;color:#c9cedb}
+.rr.c{color:#c9cedb}.rr.u{color:#dfe5ee}.rr.r{color:#ffd66b}.rr.m{color:#ff9f5a}
+.rr{font-weight:800}
+.curttl{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:9px 12px;font-size:13px;line-height:1.6}
+.curttl b{color:var(--gold)}
+.getttl{text-align:center;font-size:20px!important;color:var(--gold)}
+.getwrap{margin:8px -4px 0}
+.getmsg{text-align:center;font-size:13.5px;line-height:1.7;margin-top:12px}
+.getmsg b{color:var(--gold)}
+.popin{animation:popin .8s cubic-bezier(.2,.9,.3,1.3) both}
+@keyframes popin{0%{transform:scale(.4);opacity:0;filter:brightness(3)}60%{opacity:1}100%{transform:scale(1);filter:brightness(1)}}
+.getfl{text-align:center;font-size:12px;font-style:italic;color:#c9cedb;margin-top:6px}
+.btnrow{display:flex;gap:8px;margin-top:14px}
+.btnrow .btn{flex:1}
+.tb{display:inline-block;font-size:10px;font-weight:800;padding:0 6px;border-radius:99px;margin-right:5px;background:#3a4057;color:#dfe3ee;vertical-align:1px}
+.tb.u{background:#5b6578;color:#fff}.tb.r{background:#8a6716;color:#ffe9a8}.tb.m{background:#a8401a;color:#ffe0c8}
 </style>
 </head>
 <body>
@@ -121,6 +152,7 @@ header h1.logo{display:flex;align-items:center;gap:8px;margin:0;line-height:0}
   <button id="revBtn">📚 復習 <b id="revN">0</b>問</button>
   <button id="statBtn">📊 成績</button>
   <button id="recBtn">🏆 ランキング</button>
+  <button id="cardBtn">🎖 称号</button>
 </div>
 
 <div id="app"><div class="loading">問題を作成中…</div></div>
@@ -794,6 +826,74 @@ function showStats() {
   document.getElementById('modal').classList.add('show');
   document.getElementById('closeModal').onclick = () => document.getElementById('modal').classList.remove('show');
 }
+// ---------- 称号バナー（むずかしいの連続正解で獲得。3モード共通） ----------
+const RAR_JA = { c: 'コモン', u: 'アンコモン', r: 'レア', m: '神話レア' };
+// 画像：assets/cards/<id>.webp（背景透過の横長バナー）
+const TITLES = [
+  { id: 't03', n: 3, r: 'c', name: '初陣', fl: '最初の一撃は、いつだって少しこわい。' },
+  { id: 't05', n: 5, r: 'c', name: '見習いアタッカー', fl: '「とりあえず殴る」は卒業しました。' },
+  { id: 't10', n: 10, r: 'u', name: 'ブロッカー泣かせ', fl: 'その壁、通れる計算です。' },
+  { id: 't15', n: 15, r: 'u', name: '計算高い策士', fl: '攻撃するかどうかは、殴る前に決まっている。' },
+  { id: 't20', n: 20, r: 'r', name: 'ライフを削る者', fl: '1点ずつ、確実に。' },
+  { id: 't30', n: 30, r: 'r', name: '盤面の支配者', fl: 'この戦場では、私が手番を決める。' },
+  { id: 't50', n: 50, r: 'm', name: 'サキヨミの魔女', fl: '10ターン先の盤面まで、もう見えている。' },
+  { id: 't100', n: 100, r: 'm', name: '殴り算マスター', fl: 'すべてのコンバットは、割り切れる。' },
+];
+let cards = store.get('cd_cards', {});              // { t10: { d: '2026/11/27', seen: false } }
+const todayStr = () => { const d = new Date(); return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`; };
+const titleOf = n => TITLES.filter(t => n >= t.n).pop() || null;
+const topBest = () => Math.max(0, ...MODES.map(m => myBest(m)));
+const condTxt = t => `むずかしいで${t.n}問連続正解`;
+// しきい値に届いた未獲得の称号を付与（過去の自己ベスト・別端末の記録もここで反映）
+function grantCards(n) {
+  const got = TITLES.filter(t => n >= t.n && !cards[t.id]);
+  got.forEach(t => { cards[t.id] = { d: todayStr(), seen: false }; });
+  if (got.length) store.set('cd_cards', cards);
+  renderCardBtn();
+  return got;
+}
+function renderCardBtn() {
+  const b = document.getElementById('cardBtn'); if (!b) return;
+  const have = TITLES.filter(t => cards[t.id]).length, unseen = TITLES.some(t => cards[t.id] && !cards[t.id].seen);
+  b.innerHTML = `🎖 称号 <b>${have}</b>/${TITLES.length}${unseen ? '<span class="dot"></span>' : ''}`;
+}
+// 未獲得はシルエット表示。画像が読めない環境（claude.ai版など）では文字のプレートにする
+function bannerHtml(t, cls) {
+  const c = cards[t.id], src = `assets/cards/${t.id}.webp`;
+  const shine = c && (t.r === 'r' || t.r === 'm') ? `<span class="shine" style="-webkit-mask-image:url(${src});mask-image:url(${src})"></span>` : '';
+  return `<div class="bn ${c ? '' : 'lock'} ${cls || ''}" data-nm="${c ? t.name : '？？？'}">${c && !c.seen && cls === 'li' ? '<span class="new">NEW</span>' : ''}
+    <img src="${src}" alt="${c ? t.name : ''}" onerror="const b=this.parentNode;b.classList.add('noimg');b.insertAdjacentText('beforeend',b.dataset.nm)">${shine}${c ? '' : '<span class="q">？？？</span>'}</div>`;
+}
+const openSheet = h => { rk.open = false; document.getElementById('sheet').innerHTML = h; document.getElementById('modal').classList.add('show'); };
+const closeSheet = () => document.getElementById('modal').classList.remove('show');
+function showCards() {
+  grantCards(topBest());
+  const have = TITLES.filter(t => cards[t.id]).length, best = topBest(), cur = titleOf(best), nx = TITLES.find(t => !cards[t.id]);
+  openSheet(`<h2>🎖 称号（${have}/${TITLES.length}）</h2>
+    <div class="curttl">現在の称号：<b>${cur ? cur.name : 'なし'}</b><br>
+    ${nx ? `次の称号まで：むずかしいで <b>${nx.n}</b>問連続正解（自己ベスト ${best}問）` : 'すべての称号を獲得しました！'}</div>
+    <div class="blist">${TITLES.map(t => {
+      const c = cards[t.id];
+      return `<div>${bannerHtml(t, 'li')}<div class="bcap"><span class="cd">${condTxt(t)}</span><span><span class="rr ${t.r}">${RAR_JA[t.r]}</span>${c ? '　' + c.d + ' 獲得' : ''}</span></div>${c ? `<div class="bcap"><span class="fl">${t.fl}</span></div>` : ''}</div>`;
+    }).join('')}</div>
+    <div class="hint">「むずかしい」（基本・インスタント・読み のどれでも）で続けて正解すると、連続数に応じて山辺カフカの称号バナーが手に入ります。ランキングでは最高記録の称号が名前に付きます。</div>
+    <button class="btn sec close" id="closeModal">閉じる</button>`);
+  let ch = false; TITLES.forEach(t => { if (cards[t.id] && !cards[t.id].seen) { cards[t.id].seen = true; ch = true; } });
+  if (ch) { store.set('cd_cards', cards); renderCardBtn(); }
+  document.getElementById('closeModal').onclick = closeSheet;
+}
+function showCardGet(got, streak) {
+  const t = got[got.length - 1];
+  got.forEach(x => { cards[x.id].seen = true; }); store.set('cd_cards', cards); renderCardBtn();
+  openSheet(`<h2 class="getttl">🎉 称号獲得！</h2>
+    <div class="getwrap popin">${bannerHtml(t, 'big')}</div>
+    <div class="getfl">${t.fl}</div>
+    <div class="getmsg">「むずかしい」で <b>${streak}</b>問連続正解！<br>称号「<b>${t.name}</b>」（<span class="rr ${t.r}">${RAR_JA[t.r]}</span>）を手に入れました${got.length > 1 ? `（ほか${got.length - 1}つ）` : ''}</div>
+    <div class="btnrow"><button class="btn sec" id="cardList">称号一覧</button><button class="btn" id="closeModal">続ける</button></div>`);
+  document.getElementById('cardList').onclick = showCards;
+  document.getElementById('closeModal').onclick = closeSheet;
+}
+const titleBadge = n => { const t = titleOf(n); return t ? `<span class="tb ${t.r}">${t.name}</span>` : ''; };
 // ---------- ランキング（共有DB：ranking/<ユーザーID>） ----------
 const rk = { db: null, user: null, uid: null, rows: [], state: 'init', blocked: false, writing: false, dirty: false, names: {}, isOwner: false, tab: 'read', armed: null, open: false };
 const clampN = v => { const n = Math.floor(Number(v)); return Number.isFinite(n) && n > 0 ? Math.min(n, 9999) : 0; };
@@ -825,7 +925,7 @@ async function initRanking() {
     rk.unsub = db.collection('ranking').onSnapshot(snap => {
       rk.rows = snap.docs.filter(d => d.exists).map(d => sanitizeRow(d.id, d.data() || {}));
       if (!snap.metadata.fromCache) { clearTimeout(timer); rk.state = 'ready'; if (rk.pendingPush) { rk.pendingPush = false; setTimeout(pushMine, 0); } }
-      resolveNames(); refreshRanking();
+      resolveNames(); refreshRanking(); grantCards(topBest());
     }, () => { clearTimeout(timer); rk.state = 'off'; refreshRanking(); });
   } catch (e) { rk.state = 'off'; refreshRanking(); }
 }
@@ -875,7 +975,7 @@ function rankListHtml() {
     if (r[m] !== prev) { rank = i + 1; prev = r[m]; }
     const name = r.name || rk.names[r.id] || 'プレイヤー';
     const del = rk.isOwner ? `<button class="del ${rk.armed === r.id ? 'arm' : ''}" data-del="${esc(r.id)}">${rk.armed === r.id ? '削除する' : '×'}</button>` : '';
-    return `<li class="${r.id === rk.uid ? 'me' : ''}"><span class="n">${rank}</span><span class="nm2">${esc(name)}${r.id === rk.uid ? '（あなた）' : ''}<small>${esc(r[m + 'At'] || '')}</small></span><span class="v">${r[m]}<small>問</small></span>${del}</li>`;
+    return `<li class="${r.id === rk.uid ? 'me' : ''}"><span class="n">${rank}</span><span class="nm2">${esc(name)}${r.id === rk.uid ? '（あなた）' : ''}<small>${titleBadge(Math.max(r.basic, r.fdn, r.read))}${esc(r[m + 'At'] || '')}</small></span><span class="v">${r[m]}<small>問</small></span>${del}</li>`;
   }).join('') + '</ol>';
   return h;
 }
@@ -892,7 +992,7 @@ function rankingHtml() {
   return `<h2>🏆 ランキング（むずかしい・最高連続正解）</h2>
     <div class="rktabs">${MODES.map(x => `<button data-rk="${x}" class="${x === m ? 'on' : ''}">${MODE_JA[x]}</button>`).join('')}</div>
     <div id="rkList">${rankListHtml()}</div>
-    <div class="rkme">あなた（${MODE_JA[m]}・むずかしい）：自己ベスト <b>${myBest(m)}</b>問　現在の連続 ${stats[m].hard.streak}問</div>
+    <div class="rkme">${titleBadge(topBest())}あなた（${MODE_JA[m]}・むずかしい）：自己ベスト <b>${myBest(m)}</b>問　現在の連続 ${stats[m].hard.streak}問</div>
     <div class="pname">プレイヤー名<input id="pname" maxlength="16" placeholder="ランキングに表示する名前" value="${esc(playerName)}"><button id="pnameSave">登録</button></div>
     ${regNote}
     ${HOSTED && rk.uid ? `<div class="rkst">ログイン中${rk.gname ? '：' + esc(rk.gname) + '（あなたにだけ表示）' : ''}<button class="linkbtn" id="gLogout">ログアウト</button></div>` : ''}
@@ -1012,6 +1112,7 @@ function submit() {
             setTimeout(() => toast(`🏆 自己ベスト更新！ ${MODE_JA[puzzle.mode]}・むずかしい 連続${br.best}問`), 400);
             ensureRanking().then(pushMine);
           }
+          if (ok) { const got = grantCards(st.streak); if (got.length) { const s = st.streak; setTimeout(() => showCardGet(got, s), 900); } }
         }
       }
       if (!ok && !review.some(r => r.id === puzzle.id)) { review.push({ id: puzzle.id }); if (review.length > 100) review.shift(); saveReview(); }
@@ -1045,13 +1146,14 @@ document.getElementById('reset').onclick = () => { MODES.forEach(m => LEVELS.for
 document.getElementById('revBtn').onclick = startReview;
 document.getElementById('statBtn').onclick = showStats;
 document.getElementById('recBtn').onclick = () => showRanking(false);
+document.getElementById('cardBtn').onclick = showCards;
 window.addEventListener('hashchange', () => {
   const h = (location.hash || '').slice(1);
   if (h && (!puzzle || h !== puzzle.id)) loadId(h);
 });
 
 window.__cd = { get puzzle() { return puzzle; }, encode, decode };
-renderSeg(); renderScore(); saveReview();
+renderSeg(); renderScore(); saveReview(); grantCards(topBest());
 if (!HOSTED) ensureRanking();
 const h0 = (location.hash || '').slice(1);
 if (h0 && decode(h0)) loadId(h0); else newPuzzle();
