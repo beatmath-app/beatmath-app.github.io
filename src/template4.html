@@ -243,6 +243,8 @@ self.onmessage = function(e){
     if (type === 'lines') { self.postMessage({ id, puzzle: makeLines(tok) }); return; }
     if (type === 'solve') {
       p = mode === 'fdn' ? V2.solveFdn(spec, 0, true) : mode === 'read' ? V2.solveRead(spec, 0, true) : solveBasic(spec);
+      // 勝てる手がない盤面（以前に作られた問題）は出題しない
+      if (p && !(mode === 'read' ? p.opts.some(o => o.cells.some(c => c.c.cls === 'win')) : p.best.cls === 'win')) p = { noWin: true };
     } else if (mode === 'fdn') p = V2.generate(level, 60000, true);
     else if (mode === 'read') p = V2.generateRead(level, 120000, true);
     else { const q = V1.generate(level, 60000, true); if (q) { p = basicPuzzle(level, q.board, q.st, q.maxPly, q.opts); p.lineFn = q.lineFn; } }
@@ -430,6 +432,7 @@ async function newPuzzle() {
 async function loadId(id, fresh) {
   const spec = decode(id);
   if (!spec) return false;
+  const fromNew = fresh === true;   // newPuzzle（むずかしいの途中の問題）から
   if (fresh === undefined) fresh = !reviewing && (pending[spec.mode] === id || (curRec.id === id && curRec.fresh && !curRec.answered));
   const tok = ++loadToken;
   if (mode !== spec.mode || level !== spec.level) { mode = spec.mode; level = spec.level; store.set('cd_mode', mode); store.set('cd_level', level); renderSeg(); renderScore(); }
@@ -437,6 +440,16 @@ async function loadId(id, fresh) {
   loading('問題IDから盤面を復元して解いています…');
   const p = await call({ type: 'solve', mode: spec.mode, spec });
   if (tok !== loadToken) return true;
+  if (p && p.noWin) {   // 勝てる手がない盤面：出題せず、次の問題に進む
+    if (pending[spec.mode] === id) { delete pending[spec.mode]; store.set('cd_pending', pending); }
+    if (reviewing) {
+      const i = review.findIndex(r => r.id === id); if (i >= 0) review.splice(i, 1); saveReview();
+      if (review.length) return loadId(review[0].id);
+      reviewing = false; toast('復習完了！'); newPuzzle(); return true;
+    }
+    if (fromNew) return false;   // 呼び出し元が新しい問題を作る
+    toast('この盤面には勝てる手がないため、新しい問題を出します'); newPuzzle(); return true;
+  }
   if (!p) { loading('この問題IDは読み込めませんでした。'); return false; }
   setPuzzle(p, fresh);
   return true;
