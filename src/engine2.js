@@ -148,6 +148,17 @@ function makeVanilla(board, maxPly) {   // engine.js の makeSolver と同じ（
     return Math.max(-400, Math.min(400, v));
   }
 
+  // 決着した時点の盤面の良さ（同じターンの勝ち・負けを比べる用）：残ったクリーチャーと勝った側の残りライフ。1/1024 単位の端数
+  function endBonus1(st, iWin) {
+    let v = 0;
+    for (const side of [0, 1]) {
+      const cs = sides[side], sg = side === 0 ? 1 : -1;
+      for (let i = 0; i < cs.length; i++) if (st.a[side] >> i & 1) v += sg * ccValue(cs[i], cs[i].p, cs[i].t);
+    }
+    v += iWin ? 3 * Math.max(0, st.life[0]) : -3 * Math.max(0, st.life[1]);
+    return Math.max(-400, Math.min(400, v)) / 1024;
+  }
+
   function key(st, ply) {
     return st.a[0] + ',' + st.a[1] + ',' + st.life[0] + ',' + st.life[1] + ',' + st.turn + ',' + st.tapped + ',' + ply;
   }
@@ -239,8 +250,8 @@ function makeVanilla(board, maxPly) {   // engine.js の makeSolver と同じ（
   // 相手が攻撃しなかった直後（st.pp）にこちらも攻撃しないと、同じ局面のくり返し（にらみ合い）として決着つかず。
   // 同じ局面では同じ判断をする前提なので、問題の選択肢として選んだ最初の「攻撃しない」も数える。
   function value(st, ply, alpha = -Infinity, beta = Infinity) {
-    if (st.life[1] <= 0) return WIN - ply;
-    if (st.life[0] <= 0) return -WIN + ply;
+    if (st.life[1] <= 0) return WIN - ply + endBonus1(st, true);
+    if (st.life[0] <= 0) return -WIN + ply + endBonus1(st, false);
     if (ply >= maxPly) { capHit = true; return heuristic(st); }
     const maxer = st.turn === 0;
     let best = st.pp ? heuristic(st) : attackValue(st, ply, [], alpha, beta);
@@ -679,9 +690,21 @@ function nextPhase(s, ev) {
   }
 }
 
+// 決着した時点の盤面の良さ（同じターンの勝ち・負けを比べる用）：残ったクリーチャー・手札・勝った側の残りライフ。
+// 1/1024 単位の端数にして評価値に足す（|端数| < 0.4 なので、何ターン目の決着かは変わらない。2進の端数なので計算の誤差も出ない）
+function endBonus(s, iWin) {
+  let v = 0;
+  for (const side of [0, 1]) {
+    const sg = side === 0 ? 1 : -1;
+    for (const c of s.cr[side]) if (c.alive) v += sg * ccValue(Object.assign({ fly: c.fly }, c.k), c.p + c.ctr, c.t + c.ctr);
+    v += sg * 12 * s.hand[side].length;
+  }
+  v += iWin ? 3 * Math.max(0, s.life[0]) : -3 * Math.max(0, s.life[1]);
+  return Math.max(-400, Math.min(400, v)) / 1024;
+}
 function terminal(s) {
-  if (s.life[1] <= 0) return WIN - s.ply;
-  if (s.life[0] <= 0) return -WIN + s.ply;
+  if (s.life[1] <= 0) return WIN - s.ply + endBonus(s, true);
+  if (s.life[0] <= 0) return -WIN + s.ply + endBonus(s, false);
   return null;
 }
 
@@ -853,13 +876,14 @@ function keyRest(s) {
 }
 
 // 記録する値（評価値・上限下限の印・最善手の番号）を数値1つにまとめる（オブジェクトを作らずメモリ掃除を減らす）
-const PK_B = 4096, PK_V = 1048576;
+const PK_B = 4096, PK_V = 4194304;   // 評価値は 1024 倍した整数で持つ（1/1024 単位の端数があるため）
 function packE(v, f, b) {
-  return Number.isInteger(v) && v > -PK_V && v < PK_V && b < PK_B ? ((v + PK_V) * 4 + f) * PK_B + b : { v, f, b };
+  const vi = v * 1024;
+  return Number.isInteger(vi) && vi > -PK_V && vi < PK_V && b < PK_B ? ((vi + PK_V) * 4 + f) * PK_B + b : { v, f, b };
 }
 function unpackB(r) { return typeof r === 'number' ? r % PK_B : r.b; }
 function unpackF(r) { return typeof r === 'number' ? ((r - r % PK_B) / PK_B) % 4 : r.f; }
-function unpackV(r) { if (typeof r !== 'number') return r.v; const t = (r - r % PK_B) / PK_B; return (t - t % 4) / 4 - PK_V; }
+function unpackV(r) { if (typeof r !== 'number') return r.v; const t = (r - r % PK_B) / PK_B; return ((t - t % 4) / 4 - PK_V) / 1024; }
 function makeSolver(maxPly, tp) {
   trickPly = tp !== undefined ? tp : maxPly;
   vanillaHook = s => vanillaValue(s, maxPly);
@@ -1079,6 +1103,7 @@ function rootOptions(board, life, hand, lands, tappedOp, maxPly, tp, hc, budgetM
 
 // ---------- classification & generation ----------
 function classify(v) {
+  v = Math.round(v);   // 端数（決着した時点の盤面の良さ）を除く
   if (v >= 900) { const p = WIN - v; return p % 2 === 0 ? { cls: 'win', n: p / 2 + 1, mine: true } : { cls: 'win', n: (p + 1) / 2, mine: false }; }
   if (v <= -900) { const p = v + WIN; return p % 2 === 1 ? { cls: 'loss', n: (p + 1) / 2, mine: false } : { cls: 'loss', n: p / 2 + 1, mine: true }; }
   return { cls: 'open', n: 0 };

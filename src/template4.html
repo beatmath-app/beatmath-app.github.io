@@ -523,6 +523,8 @@ function atkLabel(arr) { return arr.length ? arr.map(i => NM[0][i]).join('・') 
 function optLabel(o) { return (o.cast ? `${NM[0][slotOf(o.cast)]}を唱えて ` : '') + atkLabel(o.attackers); }
 function optShort(o) { return (o.cast ? `${NM[0][slotOf(o.cast)]}唱え＋` : '') + (o.attackers.length ? o.attackers.map(i => NM[0][i]).join('・') : '攻撃なし'); }
 const optMatch = (o, cast, mine) => (o.cast || null) === (cast || null) && sameSet(o.attackers, mine);
+// 最善と同じターンに勝てるが、勝った時点の盤面（残ったクリーチャー・手札・ライフ）で劣る手
+const sameTurnWorse = (o, b) => o.grade === 'slow' && b && o.c.cls === 'win' && b.c.cls === 'win' && o.c.n === b.c.n && o.c.mine === b.c.mine;
 function outLabel(c) {
   if (c.cls === 'win') return c.mine ? (c.n === 1 ? 'このターンで勝ち' : `自分の${c.n}ターン目に勝ち`) : `相手の${c.n}ターン目中に勝ち`;
   if (c.cls === 'loss') return c.mine ? `自分の${c.n}ターン目中に負け` : `相手の${c.n}ターン目に負け`;
@@ -671,7 +673,7 @@ function render() {
     ・マナは土地の枚数だけで判断（色は足りている）。新しいカードは引かない<br>` : fdn ? `・手札は<b>公開</b>。お互い<b>最適なタイミング</b>で使う／使わない（AIが双方を担当）<br>
     ・マナは土地の枚数だけで判断（色は足りている）。お互い新しいカードは引かない（《一瞬の散漫》のドローも無視）<br>
     ・戦闘前に唱えるインスタントは「前のターンの終了時に唱えた」ものとして扱う<br>` : '・お互いに<b>新しいカードは出さない</b>／トリックなし（盤面だけの殴り合い）<br>'}
-    ${read ? '' : '・どの問題にも<b>勝てる手</b>があり、勝てる手はすべて正解（いちばん早く勝てる手が◎、遅く勝つ手は○惜しい）。決着つかず・負けになる手は不正解<br>'}
+    ${read ? '' : '・どの問題にも<b>勝てる手</b>があり、勝てる手はすべて正解。いちばん早く勝てる手のうち、勝った時点の盤面（残ったクリーチャー・手札・ライフ）が最も良い手が◎、遅く勝つ手や盤面で損をする手は○惜しい。決着つかず・負けになる手は不正解<br>'}
     ${fdn ? `・手札のクリーチャー：⚡速攻は自分のメインフェイズに唱えて、そのターンから攻撃できる／🌀瞬速はいつでも唱えられるが、出たターンは攻撃できない<br>
     ・自分の手札が2枚のときは、<b>土地はどちらか1枚分しかない</b>（両方は唱えられない）<br>` : ''}
     ・盤面の生物は召喚酔いなし。攻撃した生物はタップし（警戒は除く）、<b>相手のターンにはブロックできない</b><br>
@@ -706,6 +708,7 @@ function insight(you, bests) {
     const oc = firstCast(you.line, 1);
     if (oc) msgs.push(`この攻撃には相手の${cname(oc.c)}が刺さります（→ ${oc.tg.map(tgPlain).join('・')}）。`);
     if (you.grade === 'loss') msgs.push('相手の最善の反撃で先にライフを削り切られます。攻撃してタップした生物は、相手のターンにブロックできません。');
+    else if (you.grade === 'slow' && sameTurnWorse(you, b)) msgs.push('最善と同じターンに勝てますが、勝った時点で<b>クリーチャーや手札を余計に失って</b>います。必要のない攻撃や呪文は控えましょう。');
     else if (you.grade === 'slow') msgs.push(`勝てますが、最善（${outLabel(b.c)}）より決着が遅くなり、相手に余計な手番を与えます。`);
     else if (you.grade === 'open') msgs.push('負けはしませんが、より良い攻め方があります。');
   }
@@ -738,7 +741,7 @@ function resultHtml() {
   const vo = P.opts[viewIdx];
   return `<div class="result">
     <div class="verdict ${vc}"><div class="big">${big}</div>
-      <div class="small">あなた：${optLabel(you)} → <b>${outLabel(you.c)}</b><br>
+      <div class="small">あなた：${optLabel(you)} → <b>${outLabel(you.c)}${sameTurnWorse(you, bests[0]) ? '（盤面で損）' : ''}</b><br>
       AI：${bests.map(optLabel).join(' / ')} → <b>${outLabel(bests[0].c)}</b></div></div>
     <div class="hint">${insight(you, bests)}</div>
     <div class="sec-title">🧮 全攻撃パターンの評価 <span style="font-size:11px;color:var(--sub);font-weight:700">（タップで展開を表示）</span></div>
@@ -746,9 +749,9 @@ function resultHtml() {
       const i = P.opts.indexOf(o);
       return `<div class="opt g-${o.grade} ${lineOpen && i === viewIdx ? 'sel' : ''}" data-v="${i}"><span class="mark">${MARK[o.grade]}</span>
         <span class="atk">${optLabel(o)}${o === you ? '<span class="tag you">あなた</span>' : ''}${o.grade === 'best' ? '<span class="tag ai">AI</span>' : ''}${isNaive(o) && o.grade !== 'best' ? '<span class="tag naive">手札無視なら正解</span>' : ''}</span>
-        <span class="out">${outLabel(o.c)}</span></div>`;
+        <span class="out">${outLabel(o.c)}${sameTurnWorse(o, bests[0]) ? '（盤面で損）' : ''}</span></div>`;
     }).join('')}</div>
-    <div class="hint">◎最善 ○勝てるが遅い（正解扱い） △決着つかず／見劣り ×負け</div>
+    <div class="hint">◎最善 ○勝てるが遅い／盤面で損（正解扱い） △決着つかず／見劣り ×負け</div>
     ${lineSection(optLabel(vo), `<div class="tabs">
       <button data-v="${yi}" class="${viewIdx === yi ? 'on' : ''}">あなたの攻撃</button>
       <button data-v="${bi}" class="${viewIdx === bi ? 'on' : ''}">AIの最善手</button>
