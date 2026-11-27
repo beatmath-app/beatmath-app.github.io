@@ -595,7 +595,7 @@ function lineHtml(line, outcome) {
         case 'cast': stack.push(e); lines.push(`<span class="sp">${e.resp ? '↳ 対応して ' : ''}${sideName(e.by)}：${cname(e.c)}${e.kick ? '（キッカー）' : ''}${e.tg.length ? ' → ' + e.tg.map(tgName).join('・') : 'を唱える'}</span>`); break;
         case 'enter': alive[e.side][e.i] = true; shown[e.side][e.i] = true; lines.push(`<span class="sp">${nm(e.side, e.i)} が戦場に出た</span>`); break;
         case 'resolve': { const x = stack.pop(); if (x && (x.c === 'FLIGHT' || x.c === 'VEIL')) { const t = x.tg[0]; if (alive[t[0]][t[1]]) ctr[t[0]][t[1]]++; } break; }
-        case 'fizzle': stack.pop(); lines.push(`<span class="fz">${cname(e.c)} は対象がいなくなり立ち消え</span>`); break;
+        case 'fizzle': stack.pop(); lines.push(`<span class="fz">${cname(e.c)} は対象が不適正になり立ち消え</span>`); break;
         case 'die': lines.push(`<span class="d">死亡：${nm(e.side, e.i)}</span>`); alive[e.side][e.i] = false; break;
         case 'face': life[e.side] -= e.n; lines.push(`<span class="d">${sideName(e.side)}に ${e.n} 点${e.combat ? '' : '（呪文）'}</span>`); if (life[e.side] <= 0) decisive = true; break;
         case 'gain': life[e.side] += e.n; lines.push(`<span class="d">${sideName(e.side)}は${e.ll ? '絆魂で' : ''} ${e.n} 点回復</span>`); break;
