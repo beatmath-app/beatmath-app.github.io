@@ -600,10 +600,11 @@ function render() {
     ・<b>攻撃を宣言したら、お互いの手札が分かったもの</b>として、双方が最善を尽くす<br>
     ・評価は<b>勝率</b>：勝ち＝1、負け＝0、決着つかず＝0.5 を候補で平均<br>
     ・ただし、どの候補でも<b>一度も勝てない手</b>（決着つかず・負けだけ）は、勝率が高くても正解にしない<br>
+    ・正解は、勝てる手の中で勝率が最大の手（5%差まで◎、15%差まで○惜しい。どちらも正解扱い）<br>
     ・マナは土地の枚数だけで判断（色は足りている）。新しいカードは引かない<br>` : fdn ? `・手札は<b>公開</b>。お互い<b>最適なタイミング</b>で使う／使わない（AIが双方を担当）<br>
     ・マナは土地の枚数だけで判断（色は足りている）。お互い新しいカードは引かない（《一瞬の散漫》のドローも無視）<br>
     ・戦闘前に唱えるインスタントは「前のターンの終了時に唱えた」ものとして扱う<br>` : '・お互いに<b>新しいカードは出さない</b>／トリックなし（盤面だけの殴り合い）<br>'}
-    ${read ? '' : '・どの問題にも<b>勝てる手</b>があり、正解は<b>いちばん早く勝てる手</b>（決着つかず・負けになる手は正解にしない）<br>'}
+    ${read ? '' : '・どの問題にも<b>勝てる手</b>があり、勝てる手はすべて正解（いちばん早く勝てる手が◎、遅く勝つ手は○惜しい）。決着つかず・負けになる手は不正解<br>'}
     ${fdn ? `・手札のクリーチャー：⚡速攻は自分のメインフェイズに唱えて、そのターンから攻撃できる／🌀瞬速はいつでも唱えられるが、出たターンは攻撃できない<br>
     ・自分の手札が2枚のときは、<b>土地はどちらか1枚分しかない</b>（両方は唱えられない）<br>` : ''}
     ・盤面の生物は召喚酔いなし。攻撃した生物はタップし（警戒は除く）、<b>相手のターンにはブロックできない</b><br>
@@ -680,7 +681,7 @@ function resultHtml() {
         <span class="atk">${optLabel(o)}${o === you ? '<span class="tag you">あなた</span>' : ''}${o.grade === 'best' ? '<span class="tag ai">AI</span>' : ''}${isNaive(o) && o.grade !== 'best' ? '<span class="tag naive">手札無視なら正解</span>' : ''}</span>
         <span class="out">${outLabel(o.c)}</span></div>`;
     }).join('')}</div>
-    <div class="hint">◎最善 ○勝てるが遅い △決着つかず／見劣り ×負け</div>
+    <div class="hint">◎最善 ○勝てるが遅い（正解扱い） △決着つかず／見劣り ×負け</div>
     ${lineSection(optLabel(vo), `<div class="tabs">
       <button data-v="${yi}" class="${viewIdx === yi ? 'on' : ''}">あなたの攻撃</button>
       <button data-v="${bi}" class="${viewIdx === bi ? 'on' : ''}">AIの最善手</button>
@@ -731,7 +732,7 @@ function readResultHtml() {
       const oi = P.opts.indexOf(o);
       return `<tr class="${o === you ? 'you' : ''}"><td><span class="mk" style="color:${o.grade === 'best' ? 'var(--good)' : o.grade === 'slow' ? 'var(--warn)' : 'var(--bad)'}">${MARK[o.grade]}</span>${optShort(o)}${o === you ? '<span class="tag you">あなた</span>' : ''}</td>${o.cells.map((c, si) => `<td><span class="cell ${cellCls(c.c)} ${lineOpen && oi === vo && si === vs ? 'sel' : ''}" data-cell="${oi},${si}">${cellTxt(c.c)}${c.c.n ? `<small>${c.c.mine ? '自' : '敵'}${c.c.n}T</small>` : ''}</span></td>`).join('')}<td>${pct(o.ev)}</td></tr>`;
     }).join('')}</tbody></table>
-    <div class="hint">◎最善（勝てる手の中で勝率の差5%以内） ○惜しい（15%以内） ×不正解（一度も勝てない手を含む）／勝＝勝ち 負＝負け 分＝決着つかず（小さい数字は決着するターン）</div>
+    <div class="hint">◎最善（勝てる手の中で勝率の差5%以内） ○惜しい（15%以内・正解扱い） ×不正解（一度も勝てない手を含む）／勝＝勝ち 負＝負け 分＝決着つかず（小さい数字は決着するターン）</div>
     ${lineSection(`${optLabel(vopt)} × 相手が${scenShort(P.scen[vs])}`, `<div class="line">${lineHtml(cell.line, cell.c)}</div>`)}
     ${shareHtml()}
     ${nextButtons()}
@@ -990,7 +991,7 @@ function submit() {
   if (!you) { toast('その組み合わせは選べません'); return; }
   if (!puzzle.scored) {
     puzzle.scored = true;
-    const ok = you.grade === 'best';
+    const ok = you.grade === 'best' || you.grade === 'slow';   // ○（惜しい）も正解扱い
     if (reviewing) {
       const idx = review.findIndex(r => r.id === puzzle.id);
       if (idx >= 0) { const [it] = review.splice(idx, 1); if (!ok) review.push(it); }
