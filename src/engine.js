@@ -159,32 +159,46 @@ function makeSolver(board, maxPly, deadline = 0) {
 
   const flat = (c, extra) => Object.assign({ P: c.p, T: c.t, dmg: 0, dt: !!c.dt, tr: !!c.tr, ll: !!c.ll, ind: !!c.ind, prev: false, fs: !!c.fs, ds: !!c.ds, alive: true }, extra);
 
-  // 戦闘を解決 → 結果の局面の一覧（攻撃側のダメージ割り振りの選択ごと）
-  function resolve(st, attackers, avail, assign) {
-    const att = st.turn, def = 1 - att;
-    const acs = sides[att], dcs = sides[def];
+  // 戦闘の結果（誰が死に、何点通り、何点回復するか）は能力値が変わらないので、攻撃とブロックの組み合わせごとに覚えて使い回す
+  const combatCache = new Map();
+  function combatOuts(att, attackers, avail, assign) {
+    let ck = att + ':' + attackers.join('.') + ':';
+    for (let k = 0; k < avail.length; k++) if (assign[k] >= 0) ck += avail[k] + '>' + assign[k] + ',';
+    let outs = combatCache.get(ck);
+    if (outs) return outs;
+    const def = 1 - att, acs = sides[att], dcs = sides[def];
     const A = attackers.map((ai, j) => flat(acs[ai], { blocked: assign.some(x => x === j) }));
     const B = [], bIdx = [];
     avail.forEach((bi, k) => { if (assign[k] >= 0) { B.push(flat(dcs[bi], { target: assign[k] })); bIdx.push(bi); } });
-    const outs = ccCombat(A, B);
-    const seen = new Set(), res = [];
-    for (const o of outs) {
+    const seen = new Set(); outs = [];
+    for (const o of ccCombat(A, B)) {
       let deadAtt = 0, deadDef = 0;
       attackers.forEach((ai, j) => { if (!o.aAlive[j]) deadAtt |= 1 << ai; });
       bIdx.forEach((bi, j) => { if (!o.bAlive[j]) deadDef |= 1 << bi; });
+      // 結果の局面が同じになるもの（残るクリーチャーとライフが同じ）は最初の1つだけ
+      const k = deadAtt + ',' + deadDef + ',' + o.gain[0] + ',' + (o.gain[1] - o.toPlayer);
+      if (seen.has(k)) continue; seen.add(k);
+      outs.push({ deadAtt, deadDef, toPlayer: o.toPlayer, gain: o.gain });
+    }
+    combatCache.set(ck, outs);
+    return outs;
+  }
+  // 戦闘を解決 → 結果の局面の一覧（攻撃側のダメージ割り振りの選択ごと）
+  function resolve(st, attackers, avail, assign) {
+    const att = st.turn, def = 1 - att;
+    const acs = sides[att];
+    let tapped = 0;
+    attackers.forEach(ai => { if (!acs[ai].vg) tapped |= 1 << ai; });   // 警戒は攻撃してもタップしない
+    return combatOuts(att, attackers, avail, assign).map(o => {
       const a = [st.a[0], st.a[1]];
-      a[att] &= ~deadAtt; a[def] &= ~deadDef;
+      a[att] &= ~o.deadAtt; a[def] &= ~o.deadDef;
       const life = [st.life[0], st.life[1]];
       life[def] -= o.toPlayer; life[att] += o.gain[0]; life[def] += o.gain[1];
-      const k = a[0] + ',' + a[1] + ',' + life[0] + ',' + life[1];
-      if (seen.has(k)) continue; seen.add(k);
-      let tapped = 0;
-      attackers.forEach(ai => { if (!acs[ai].vg) tapped |= 1 << ai; });   // 警戒は攻撃してもタップしない
       const gainAbs = [0, 0]; gainAbs[att] = o.gain[0]; gainAbs[def] = o.gain[1];
-      res.push({ a, life, turn: def, tapped: tapped & a[att], dmg: o.toPlayer, deadAtt, deadDef, gainAbs, pp: !attackers.length });
-    }
-    return res;
+      return { a, life, turn: def, tapped: tapped & a[att], dmg: o.toPlayer, deadAtt: o.deadAtt, deadDef: o.deadDef, gainAbs, pp: !attackers.length };
+    });
   }
+
 
   function attackSubsets(st) {
     const att = st.turn, cs = sides[att];

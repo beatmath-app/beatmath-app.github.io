@@ -180,32 +180,46 @@ function makeVanilla(board, maxPly) {   // engine.js の makeSolver と同じ（
 
   const flat = (c, extra) => Object.assign({ P: c.p, T: c.t, dmg: 0, dt: !!c.dt, tr: !!c.tr, ll: !!c.ll, ind: !!c.ind, prev: false, fs: !!c.fs, ds: !!c.ds, alive: true }, extra);
 
-  // 戦闘を解決 → 結果の局面の一覧（攻撃側のダメージ割り振りの選択ごと）
-  function resolve(st, attackers, avail, assign) {
-    const att = st.turn, def = 1 - att;
-    const acs = sides[att], dcs = sides[def];
+  // 戦闘の結果（誰が死に、何点通り、何点回復するか）は能力値が変わらないので、攻撃とブロックの組み合わせごとに覚えて使い回す
+  const combatCache = new Map();
+  function combatOuts(att, attackers, avail, assign) {
+    let ck = att + ':' + attackers.join('.') + ':';
+    for (let k = 0; k < avail.length; k++) if (assign[k] >= 0) ck += avail[k] + '>' + assign[k] + ',';
+    let outs = combatCache.get(ck);
+    if (outs) return outs;
+    const def = 1 - att, acs = sides[att], dcs = sides[def];
     const A = attackers.map((ai, j) => flat(acs[ai], { blocked: assign.some(x => x === j) }));
     const B = [], bIdx = [];
     avail.forEach((bi, k) => { if (assign[k] >= 0) { B.push(flat(dcs[bi], { target: assign[k] })); bIdx.push(bi); } });
-    const outs = ccCombat(A, B);
-    const seen = new Set(), res = [];
-    for (const o of outs) {
+    const seen = new Set(); outs = [];
+    for (const o of ccCombat(A, B)) {
       let deadAtt = 0, deadDef = 0;
       attackers.forEach((ai, j) => { if (!o.aAlive[j]) deadAtt |= 1 << ai; });
       bIdx.forEach((bi, j) => { if (!o.bAlive[j]) deadDef |= 1 << bi; });
+      // 結果の局面が同じになるもの（残るクリーチャーとライフが同じ）は最初の1つだけ
+      const k = deadAtt + ',' + deadDef + ',' + o.gain[0] + ',' + (o.gain[1] - o.toPlayer);
+      if (seen.has(k)) continue; seen.add(k);
+      outs.push({ deadAtt, deadDef, toPlayer: o.toPlayer, gain: o.gain });
+    }
+    combatCache.set(ck, outs);
+    return outs;
+  }
+  // 戦闘を解決 → 結果の局面の一覧（攻撃側のダメージ割り振りの選択ごと）
+  function resolve(st, attackers, avail, assign) {
+    const att = st.turn, def = 1 - att;
+    const acs = sides[att];
+    let tapped = 0;
+    attackers.forEach(ai => { if (!acs[ai].vg) tapped |= 1 << ai; });   // 警戒は攻撃してもタップしない
+    return combatOuts(att, attackers, avail, assign).map(o => {
       const a = [st.a[0], st.a[1]];
-      a[att] &= ~deadAtt; a[def] &= ~deadDef;
+      a[att] &= ~o.deadAtt; a[def] &= ~o.deadDef;
       const life = [st.life[0], st.life[1]];
       life[def] -= o.toPlayer; life[att] += o.gain[0]; life[def] += o.gain[1];
-      const k = a[0] + ',' + a[1] + ',' + life[0] + ',' + life[1];
-      if (seen.has(k)) continue; seen.add(k);
-      let tapped = 0;
-      attackers.forEach(ai => { if (!acs[ai].vg) tapped |= 1 << ai; });   // 警戒は攻撃してもタップしない
       const gainAbs = [0, 0]; gainAbs[att] = o.gain[0]; gainAbs[def] = o.gain[1];
-      res.push({ a, life, turn: def, tapped: tapped & a[att], dmg: o.toPlayer, deadAtt, deadDef, gainAbs, pp: !attackers.length });
-    }
-    return res;
+      return { a, life, turn: def, tapped: tapped & a[att], dmg: o.toPlayer, deadAtt: o.deadAtt, deadDef: o.deadDef, gainAbs, pp: !attackers.length };
+    });
   }
+
 
   function attackSubsets(st) {
     const att = st.turn, cs = sides[att];
@@ -396,11 +410,16 @@ let HC = {};   // 手札のクリーチャー: id('C0'...) → {side, slot, p, t
 function cardCost(id) { return HC[id] ? HC[id].cost : CARDS[id].cost; }
 function isCreatureCard(id) { return !!HC[id]; }
 
+// クリーチャーの複製（newCreature と同じ項目を直接書き写す。Object.assign より速く、ゴミも出にくい。k は共有して変更しない）
+function cloneCr(c) {
+  return { p: c.p, t: c.t, fly: c.fly, reach: c.reach, k: c.k, alive: c.alive, inHand: c.inHand, sick: c.sick, tap: c.tap,
+    ctr: c.ctr, tp: c.tp, tt: c.tt, dmg: c.dmg, dtHit: c.dtHit, fs: c.fs, ind: c.ind, hex: c.hex, prev: c.prev, tfly: c.tfly };
+}
 function clone(s) {
   return {
     ply: s.ply, act: s.act, life: s.life.slice(), hand: [s.hand[0].slice(), s.hand[1].slice()], lands: s.lands, mana: s.mana.slice(), phase: s.phase,
     quiet: s.quiet, pp: s.pp,
-    cr: [s.cr[0].map(c => Object.assign({}, c)), s.cr[1].map(c => Object.assign({}, c))],
+    cr: [s.cr[0].map(cloneCr), s.cr[1].map(cloneCr)],
     atk: s.atk, blk: s.blk ? s.blk.slice() : null,
     win: s.win ? { prio: s.win.prio, passes: s.win.passes, stack: s.win.stack.map(x => ({ c: x.c, by: x.by, tg: x.tg.slice(), kick: x.kick })) } : null,
   };
@@ -744,20 +763,23 @@ function vanillaValue(s, maxPly) {
 }
 
 // 決定局面の子：[{ev, s}]
-function children(s, maxPly) {
+// 次の手の一覧。局面は必要になったときに作る（枝刈りで読まない手のコピー・先送りを省くため）。手の順番は変えない
+function childThunks(s, maxPly) {
   const out = [];
-  const push = (ns, ev) => { delete ns.dec; out.push({ ev, s: advance(ns, ev, maxPly) }); };
+  const mk = build => out.push(() => { const [ns, ev] = build(); delete ns.dec; return { ev, s: advance(ns, ev, maxPly) }; });
   switch (s.phase) {
     case 'w1': case 'w2': case 'w3': case 'w4': {
       const p = s.win.prio;
-      { const ns = clone(s); ns.win.passes++; ns.win.prio = 1 - p; push(ns, []); }
+      mk(() => { const ns = clone(s); ns.win.passes++; ns.win.prio = 1 - p; return [ns, []]; });
       for (const o of castOptions(s, p)) {
-        const ns = clone(s);
-        ns.hand[p].splice(ns.hand[p].indexOf(o.card), 1);
-        ns.mana[p] -= o.cost;
-        ns.win.stack.push({ c: o.card, by: p, tg: o.tg, kick: !!o.kick });
-        ns.win.prio = 1 - p; ns.win.passes = 1; ns.quiet = false;
-        push(ns, [{ t: 'cast', by: p, c: o.card, tg: o.tg, kick: !!o.kick, resp: s.win.stack.length > 0 }]);
+        mk(() => {
+          const ns = clone(s);
+          ns.hand[p].splice(ns.hand[p].indexOf(o.card), 1);
+          ns.mana[p] -= o.cost;
+          ns.win.stack.push({ c: o.card, by: p, tg: o.tg, kick: !!o.kick });
+          ns.win.prio = 1 - p; ns.win.passes = 1; ns.quiet = false;
+          return [ns, [{ t: 'cast', by: p, c: o.card, tg: o.tg, kick: !!o.kick, resp: s.win.stack.length > 0 }]];
+        });
       }
       break;
     }
@@ -765,11 +787,13 @@ function children(s, maxPly) {
       const A = s.cr[s.act];
       const avail = []; A.forEach((c, i) => { if (canAttack(c)) avail.push(i); });
       for (let m = 0; m < (1 << avail.length); m++) {
-        const ns = clone(s); let mask = 0;
-        avail.forEach((i, j) => { if (m >> j & 1) { mask |= 1 << i; if (!ns.cr[s.act][i].k.vg) ns.cr[s.act][i].tap = true; } });
-        ns.atk = mask; if (mask) ns.quiet = false;
-        ns.phase = mask ? 'w2' : 'w4'; ns.win = null;
-        push(ns, [{ t: 'atk', side: s.act, mask }]);
+        mk(() => {
+          const ns = clone(s); let mask = 0;
+          avail.forEach((i, j) => { if (m >> j & 1) { mask |= 1 << i; if (!ns.cr[s.act][i].k.vg) ns.cr[s.act][i].tap = true; } });
+          ns.atk = mask; if (mask) ns.quiet = false;
+          ns.phase = mask ? 'w2' : 'w4'; ns.win = null;
+          return [ns, [{ t: 'atk', side: s.act, mask }]];
+        });
       }
       break;
     }
@@ -782,9 +806,12 @@ function children(s, maxPly) {
       const rec = k => {
         if (k === bl.length) {
           if (!menaceOK()) return;   // 威迫：1体だけではブロックできない
-          const ns = clone(s); ns.blk = asg.slice(); ns.phase = 'w3'; ns.win = null;
-          const pairs = []; asg.forEach((a, b) => { if (a >= 0) pairs.push([b, a]); });
-          push(ns, [{ t: 'blk', pairs }]);
+          const blk = asg.slice();
+          mk(() => {
+            const ns = clone(s); ns.blk = blk; ns.phase = 'w3'; ns.win = null;
+            const pairs = []; blk.forEach((a, b) => { if (a >= 0) pairs.push([b, a]); });
+            return [ns, [{ t: 'blk', pairs }]];
+          });
           return;
         }
         asg[bl[k]] = -1; rec(k + 1);
@@ -795,12 +822,13 @@ function children(s, maxPly) {
       break;
     }
     case 'dmg': {
-      for (const o of combatDamage(s)) { const ns = o.s; ns.phase = 'w4'; ns.win = null; push(ns, o.ev); }
+      for (const o of combatDamage(s)) mk(() => { const ns = o.s; ns.phase = 'w4'; ns.win = null; return [ns, o.ev]; });
       break;
     }
   }
   return out;
 }
+function children(s, maxPly) { return childThunks(s, maxPly).map(f => f()); }
 
 function heuristic(s) {
   let v = 0;
@@ -813,8 +841,10 @@ function heuristic(s) {
   return Math.max(-400, Math.min(400, v));
 }
 
-function keyOf(s, noPly) {
-  let k = s.phase + (noPly ? '' : s.ply) + (s.quiet ? 'q' : '') + (s.pp ? 'p' : '') + '|' + s.act + '|' + s.life[0] + ',' + s.life[1] + '|' + s.hand[0].join('.') + ',' + s.hand[1].join('.') + '|' + s.mana[0] + ',' + s.mana[1] + '|' + s.atk + '|' + (s.blk ? s.blk.join('.') : '') + '|';
+function keyOf(s, noPly) { return s.phase + (noPly ? '' : s.ply) + keyRest(s); }
+// 局面の記録用の文字列（手数より後ろの部分）
+function keyRest(s) {
+  let k = (s.quiet ? 'q' : '') + (s.pp ? 'p' : '') + '|' + s.act + '|' + s.life[0] + ',' + s.life[1] + '|' + s.hand[0].join('.') + ',' + s.hand[1].join('.') + '|' + s.mana[0] + ',' + s.mana[1] + '|' + s.atk + '|' + (s.blk ? s.blk.join('.') : '') + '|';
   for (const side of [0, 1]) for (const c of s.cr[side]) {
     k += c.alive ? (c.tap ? 'T' : 'U') + (c.sick ? 's' : '') + c.ctr + ',' + c.tp + ',' + c.tt + ',' + c.dmg + (c.dtHit ? 'd' : '') + (c.fs ? 'f' : '') + (c.ind ? 'i' : '') + (c.hex ? 'h' : '') + (c.prev ? 'p' : '') + (c.tfly ? 'y' : '') + ';' : 'x;';
   }
@@ -822,6 +852,14 @@ function keyOf(s, noPly) {
   return k;
 }
 
+// 記録する値（評価値・上限下限の印・最善手の番号）を数値1つにまとめる（オブジェクトを作らずメモリ掃除を減らす）
+const PK_B = 4096, PK_V = 1048576;
+function packE(v, f, b) {
+  return Number.isInteger(v) && v > -PK_V && v < PK_V && b < PK_B ? ((v + PK_V) * 4 + f) * PK_B + b : { v, f, b };
+}
+function unpackB(r) { return typeof r === 'number' ? r % PK_B : r.b; }
+function unpackF(r) { return typeof r === 'number' ? ((r - r % PK_B) / PK_B) % 4 : r.f; }
+function unpackV(r) { if (typeof r !== 'number') return r.v; const t = (r - r % PK_B) / PK_B; return (t - t % 4) / 4 - PK_V; }
 function makeSolver(maxPly, tp) {
   trickPly = tp !== undefined ? tp : maxPly;
   vanillaHook = s => vanillaValue(s, maxPly);
@@ -838,13 +876,18 @@ function makeSolver(maxPly, tp) {
       if (s.leaf || s.approx || s.vcap) capHit = true;
       return s.val;
     }
-    const kx = keyOf(s, true), k = keyOf(s);
-    let e = memoX.get(kx), ev;
-    if (e) ev = fromRel(e.v, s.ply);
-    else { e = memo.get(k); if (e) ev = e.v; }
-    if (e) {
-      if (e.f === 0 || (e.f === 1 && ev >= beta) || (e.f === 2 && ev <= alpha)) {
-        if (e.cap) capHit = true;
+    const rest = keyRest(s), kx = s.phase + rest;   // 記録用の文字列は1回だけ作る
+    let k, has = false, ev, ef = 0, eb = 0, ecap = false;
+    const rx = memoX.get(kx);
+    if (rx !== undefined) { has = true; ev = fromRel(unpackV(rx), s.ply); ef = unpackF(rx); eb = unpackB(rx); }
+    else {
+      k = s.phase + s.ply + rest;
+      const rm = memo.get(k);
+      if (rm !== undefined) { has = true; ev = unpackV(rm); ef = unpackF(rm); eb = unpackB(rm); ecap = true; }
+    }
+    if (has) {
+      if (ef === 0 || (ef === 1 && ev >= beta) || (ef === 2 && ev <= alpha)) {
+        if (ecap) capHit = true;
         return ev;
       }
     }
@@ -853,11 +896,11 @@ function makeSolver(maxPly, tp) {
     const sCap = capHit;
     capHit = false;
     const maxer = s.dec === 0;
-    const ch = children(s, maxPly);
-    if (e && e.b !== undefined && e.b < ch.length) { const t = ch[e.b]; ch[e.b] = ch[0]; ch[0] = t; }
+    const ch = childThunks(s, maxPly);   // 局面は読む直前に作る
+    if (has && eb < ch.length) { const t = ch[eb]; ch[eb] = ch[0]; ch[0] = t; }
     let a = alpha, b = beta, best = maxer ? -Infinity : Infinity, bi = 0;
     for (let j = 0; j < ch.length; j++) {
-      const v = search(ch[j].s, a, b);
+      const v = search(ch[j]().s, a, b);
       if (maxer ? v > best : v < best) { best = v; bi = j; }
       if (maxer) { if (best > a) a = best; } else { if (best < b) b = best; }
       if (a >= b) break;
@@ -866,9 +909,9 @@ function makeSolver(maxPly, tp) {
     capHit = sCap || myCap;
     const f = best <= alpha ? 2 : best >= beta ? 1 : 0;
     let orig = bi;
-    if (e && e.b !== undefined && e.b < ch.length) { if (bi === 0) orig = e.b; else if (bi === e.b) orig = 0; }
-    if (!myCap) memoX.set(kx, { v: toRel(best, s.ply), f, b: orig });
-    else memo.set(k, { v: best, f, b: orig, cap: true });
+    if (has && eb < ch.length) { if (bi === 0) orig = eb; else if (bi === eb) orig = 0; }
+    if (!myCap) memoX.set(kx, packE(toRel(best, s.ply), f, orig));
+    else memo.set(k === undefined ? s.phase + s.ply + rest : k, packE(best, f, orig));
     return best;
   }
   // 読みの深さを変える（深さに依存しない memoX はそのまま使い回す）
