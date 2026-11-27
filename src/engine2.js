@@ -476,9 +476,32 @@ function instantOptions(s, by, id, out) {
   });
   const res = [];
   const add = (tg, base, kick) => { const cost = base + wardCost(s, by, tg); if (cost <= M) res.push({ card: id, tg, kick: !!kick, cost }); };
+  // 相手のクリーチャーを強めて、自分の除去の対象にする組み合わせ（巨大化・確実な一撃→次の一手、束の間の飛行→壊れた翼）。
+  // 手札にその除去があり、両方を唱えるマナがあるときだけ候補にする
+  const comboOn = (killer, ok) => {
+    if (!s.hand[by].includes(killer)) return;
+    for (const i of foe) {
+      const c = s.cr[opp][i];
+      if (ok(c) && C.cost + CARDS[killer].cost + 2 * (c.k.wd || 0) <= M) add([[opp, i]], C.cost);
+    }
+  };
+  // 相手の呪文に対応して自分のクリーチャーを弱め、次の一手（パワー4以上が対象）を立ち消えにする
+  const shrinkOwn = d => {
+    if (stackEmpty) return;
+    for (const x of s.win.stack) {
+      if (x.by !== opp || x.c !== 'MOVE') continue;
+      for (const t of x.tg) {
+        if (t[0] !== by) continue;
+        const c = s.cr[by][t[1]];
+        if (c.alive && P(c) - d < 4 && !(id === 'STAB' && T(c) - 2 <= c.dmg)) add([[by, t[1]]], C.cost);
+      }
+    }
+  };
   switch (id) {
     case 'GG': case 'SURE': case 'FLIGHT': case 'VEIL':
       if (trickTime) for (const i of own) add([[by, i]], C.cost);
+      if (id === 'GG' || id === 'SURE') comboOn('MOVE', c => P(c) < 4 && P(c) + 3 >= 4);
+      if (id === 'FLIGHT') comboOn('WINGS', c => !flies(c));
       break;
     case 'DIVINE':
       if (!trickTime) break;
@@ -487,9 +510,11 @@ function instantOptions(s, by, id, out) {
       break;
     case 'DISTRACT':
       if (trickTime) for (const i of foe) add([[opp, i]], C.cost);
+      shrinkOwn(1);
       break;
     case 'STAB': case 'ABRADE': case 'DOWNFALL':
       for (const i of foe) add([[opp, i]], C.cost);
+      if (id === 'STAB') shrinkOwn(2);
       break;
     case 'JOUST':
       for (const i of foe) if (inCombat(s, opp, i)) add([[opp, i]], C.cost);
@@ -863,6 +888,17 @@ function makeSolver(maxPly, tp) {
     finally { deadline = saved; }
     return evs;
   }
+  // 最善手（同点なら最初に見つけたもの）でそのターンの終わりまで進めたときの盤面の点数（読み筋の同点の選び分け用）
+  function settle(st) {
+    let cur = st;
+    for (let n = 0; n < 80 && cur.val === undefined && !cur.vanilla && cur.ply === st.ply; n++) {
+      const ch = children(cur, maxPly), maxer = cur.dec === 0;
+      let b = maxer ? -Infinity : Infinity, pk = ch[0];
+      for (const c of ch) { const v = search(c.s); if (maxer ? v > b : v < b) { b = v; pk = c; } }
+      cur = pk.s;
+    }
+    return cur.val !== undefined && Math.abs(cur.val) >= 900 ? cur.val : heuristic(cur);
+  }
   function lineInner(s, limit, evs) {
     let cur = s;
     for (let n = 0; n < limit; n++) {
@@ -870,8 +906,15 @@ function makeSolver(maxPly, tp) {
       if (cur.val !== undefined) { evs.push({ t: cur.leaf ? 'horizon' : 'end', val: cur.val }); break; }
       const ch = children(cur, maxPly);
       const maxer = cur.dec === 0;
-      let best = maxer ? -Infinity : Infinity, pick = null;
-      for (const c of ch) { const v = search(c.s); if (maxer ? v > best : v < best) { best = v; pick = c; } }
+      const vals = ch.map(c => search(c.s));
+      const best = maxer ? Math.max(...vals) : Math.min(...vals);
+      const ties = ch.filter((c, j) => vals[j] === best);
+      // 同じ結果になる手が複数あるときは、そのターンの終わりの盤面の点数が手番の人にとって良いほうを表示する
+      let pick = ties[0];
+      if (ties.length > 1) {
+        let bs = maxer ? -Infinity : Infinity;
+        for (const c of ties) { const v = settle(c.s); if (maxer ? v > bs : v < bs) { bs = v; pick = c; } }
+      }
       evs.push(...pick.ev);
       cur = pick.s;
     }
