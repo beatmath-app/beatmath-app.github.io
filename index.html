@@ -2251,7 +2251,7 @@ const NM = [['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'], ['①', '②', '③', '④
 
 // ---------- 問題ID ----------
 const MCH = { basic: 'b', fdn: 'f', read: 'r' }, LCH = { easy: 'e', normal: 'n', hard: 'h' };
-// 新形式（q2-）：キーワードと手札クリーチャーを含む。旧形式（q-）も読める
+// 盤面の文字列（キーワードと手札クリーチャーを含む）。共有するIDはこれを暗号化したもの（q3-）
 const KWC = [['fly', 'f'], ['reach', 'r'], ['fs', 's'], ['ds', 'd'], ['dt', 'x'], ['tr', 't'], ['me', 'm'], ['vg', 'v'], ['ll', 'l'], ['ind', 'i'], ['df', 'w'], ['hx', 'h'], ['hs', 'q']];
 const crTok = c => '' + c.p + c.t + KWC.filter(([k]) => c[k]).map(([, ch]) => ch).join('') + (c.wd ? 'k' + c.wd : '');
 function crParse(s) {
@@ -2271,17 +2271,49 @@ function cardTok(p, id) {
   if (id[0] === 'C') { const d = p.hc[+id.slice(1)]; return 'C' + (d.flash ? 'f' : 'h') + d.cost + crTok(Object.assign({}, d, { hs: false })); }
   return 'I' + String.fromCharCode(97 + CARD_IDS.indexOf(id));
 }
+// ---- 問題IDの暗号化（q3-）：盤面の文字列を読めない形にし、確認用の3文字で書き換えを見つける ----
+// 鍵はアプリの中にあるので完全な守りではないが、URLを手で書き換えて別の盤面を作ることは防げる
+const ID_KEY = 'BeatMath/殴り算/2026';
+const PLAIN_CH = '0123456789abcdefghijklmnopqrstuvwxyzZLIC-';
+const ID_CH = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+function idHash(str) {   // FNV-1a（32ビット）
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return h >>> 0;
+}
+function idStream(seed) {   // mulberry32
+  let a = seed >>> 0;
+  return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) % 64; };
+}
+function idSeal(plain) {
+  const h = idHash(ID_KEY + plain) & 0x3ffff;   // 確認用（18ビット＝3文字）
+  const sum = ID_CH[h >> 12] + ID_CH[h >> 6 & 63] + ID_CH[h & 63];
+  const ks = idStream(idHash(ID_KEY) ^ h);
+  let out = '';
+  for (const ch of plain) out += ID_CH[(PLAIN_CH.indexOf(ch) + ks()) % 64];
+  return 'q3-' + sum + out;
+}
+function idOpen(id) {
+  if (!/^q3-[A-Za-z0-9_-]{4,}$/.test(id)) return null;
+  const body = id.slice(3), sv = [...body.slice(0, 3)].map(c => ID_CH.indexOf(c));
+  const h = sv[0] << 12 | sv[1] << 6 | sv[2];
+  const ks = idStream(idHash(ID_KEY) ^ h);
+  let plain = '';
+  for (const c of body.slice(3)) { const v = (ID_CH.indexOf(c) - ks() + 64) % 64; if (v >= PLAIN_CH.length) return null; plain += PLAIN_CH[v]; }
+  return (idHash(ID_KEY + plain) & 0x3ffff) === h ? plain : null;
+}
 function encode(p) {
   const side = arr => arr.length ? arr.map(crTok).join('Z') : '0';
   const hand = h => h.length ? h.map(id => cardTok(p, id)).join('Z') : '0';
-  return ['q2', MCH[p.mode] + LCH[p.level], side(p.board.me), side(p.board.op), p.life[0] + 'x' + p.life[1], p.tapped,
-    hand(p.hand[0]), hand(p.hand[1]), '' + p.lands[0] + p.lands[1], p.scen ? p.scen.map(id => cardTok(p, id)).join('Z') : '0'].join('-');
+  return idSeal([ MCH[p.mode] + LCH[p.level], side(p.board.me), side(p.board.op), p.life[0] + 'x' + p.life[1], p.tapped,
+    hand(p.hand[0]), hand(p.hand[1]), '' + p.lands[0] + p.lands[1], p.scen ? p.scen.map(id => cardTok(p, id)).join('Z') : '0'].join('-'));
 }
 function decode(id) {
   try {
-    const f = id.split('-');
-    if (f[0] === 'q') return decodeOld(f);
-    if (f.length !== 10 || f[0] !== 'q2') return null;
+    const plain = idOpen(id);   // 暗号化したID（q3-）だけ受け付ける。書き換えたIDや古い形式（q-・q2-）は読めない
+    if (!plain) return null;
+    const f = ('q2-' + plain).split('-');
+    if (f.length !== 10) return null;
     const m = Object.keys(MCH).find(k => MCH[k] === f[1][0]), l = Object.keys(LCH).find(k => LCH[k] === f[1][1]);
     const side = s => s === '0' ? [] : s.split('Z').map(crParse);
     const life = f[4].split('x').map(Number);
@@ -2302,18 +2334,6 @@ function decode(id) {
     if (!spec.board.me.length || spec.board.me.length + hc.filter(d => d.side === 0).length > 8) return null;
     return spec;
   } catch (e) { return null; }
-}
-function decodeOld(f) {
-  if (f.length !== 9) return null;
-  const m = Object.keys(MCH).find(k => MCH[k] === f[1][0]), l = Object.keys(LCH).find(k => LCH[k] === f[1][1]);
-  const crs = s => { if (s.length % 3 || !s.length || s.length > 12) throw 0; const r = []; for (let i = 0; i < s.length; i += 3) { const p = +s[i], t = +s[i + 1], k = s[i + 2]; if (!(t >= 1) || !(p >= 0) || !'nfr'.includes(k)) throw 0; r.push({ p, t, fly: k === 'f', reach: k === 'r' }); } return r; };
-  const hd = ch => { if (ch === 'z') return null; const c = CARD_IDS[ch.charCodeAt(0) - 97]; if (!c) throw 0; return c; };
-  const life = f[4].split('x').map(Number);
-  if (!m || !l || life.length !== 2 || !(life[0] > 0) || !(life[1] > 0)) return null;
-  const spec = { mode: m, level: l, board: { me: crs(f[2]), op: crs(f[3]) }, life, tapped: +f[5] || 0, hc: [],
-    hand: [hd(f[6][0]), hd(f[6][1])].map(x => x ? [x] : []), lands: [+f[7][0], +f[7][1]] };
-  if (m === 'read') { spec.scen = f[8].split('').map(hd); if (spec.scen.length < 2) return null; }
-  return spec;
 }
 let bankMap = null;
 function bankLookup(id) {
@@ -2381,9 +2401,20 @@ async function newPuzzle() {
   prefetch(m, l);   // 読み筋づくり（setPuzzle で依頼）の後に、次の問題を作る
 }
 async function loadId(id, fresh) {
-  const spec = decode(id);
-  if (!spec) return false;
   const fromNew = fresh === true;   // newPuzzle（むずかしいの途中の問題）から
+  // 出題できないID：むずかしいの途中の問題・復習リストから外し、次の問題に進む
+  const skip = msg => {
+    for (const m of MODES) if (pending[m] === id) { delete pending[m]; store.set('cd_pending', pending); }
+    const i = review.findIndex(r => r.id === id); if (i >= 0) { review.splice(i, 1); saveReview(); }
+    if (reviewing) {
+      if (review.length) return loadId(review[0].id);
+      reviewing = false; toast('復習完了！'); newPuzzle(); return true;
+    }
+    if (fromNew) return false;   // 呼び出し元が新しい問題を作る
+    toast(msg); newPuzzle(); return true;
+  };
+  const spec = decode(id);
+  if (!spec) return skip('この問題IDは読み込めないため、新しい問題を出します');   // 書き換えたID・古い形式のID
   if (fresh === undefined) fresh = !reviewing && (pending[spec.mode] === id || (curRec.id === id && curRec.fresh && !curRec.answered));
   const tok = ++loadToken;
   if (mode !== spec.mode || level !== spec.level) { mode = spec.mode; level = spec.level; store.set('cd_mode', mode); store.set('cd_level', level); renderSeg(); renderScore(); }
@@ -2391,16 +2422,7 @@ async function loadId(id, fresh) {
   loading('問題IDから盤面を復元して解いています…');
   const p = await call({ type: 'solve', mode: spec.mode, spec });
   if (tok !== loadToken) return true;
-  if (p && p.noWin) {   // 勝てる手がない盤面：出題せず、次の問題に進む
-    if (pending[spec.mode] === id) { delete pending[spec.mode]; store.set('cd_pending', pending); }
-    if (reviewing) {
-      const i = review.findIndex(r => r.id === id); if (i >= 0) review.splice(i, 1); saveReview();
-      if (review.length) return loadId(review[0].id);
-      reviewing = false; toast('復習完了！'); newPuzzle(); return true;
-    }
-    if (fromNew) return false;   // 呼び出し元が新しい問題を作る
-    toast('この盤面には勝てる手がないため、新しい問題を出します'); newPuzzle(); return true;
-  }
+  if (p && p.noWin) return skip('この盤面には勝てる手がないため、新しい問題を出します');   // 勝てる手がない盤面
   if (!p) { loading('この問題IDは読み込めませんでした。'); return false; }
   setPuzzle(p, fresh);
   return true;
@@ -3121,7 +3143,7 @@ window.__cd = { get puzzle() { return puzzle; }, encode, decode };
 renderSeg(); renderScore(); saveReview(); grantCards(topBest());
 if (!HOSTED) ensureRanking();
 const h0 = (location.hash || '').slice(1);
-if (h0 && decode(h0)) loadId(h0); else newPuzzle();
+if (h0) loadId(h0); else newPuzzle();
 })();
 </script>
 </body>
