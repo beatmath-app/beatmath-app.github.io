@@ -1171,7 +1171,7 @@ function tryPuzzle(levelName, lazy = false) {
 const PRE_TRICK = 4;
 function fdnOK(p) {
   const opts = p.opts;
-  if (opts.length < 2 || p.best.cls === 'loss') return false;
+  if (opts.length < 2 || p.best.cls !== 'win') return false;   // 勝てる手がない問題は出さない
   if (opts.filter(o => o.grade === 'best').length / opts.length > 0.5) return false;
   // 手札を無視した答えが間違いになる問題だけ
   const nb = p.naiveBest.map(a => a.join());

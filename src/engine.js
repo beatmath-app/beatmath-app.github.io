@@ -447,7 +447,7 @@ function tryPuzzle(levelName, lazy = false) {
 function basicOK(opts, board, r) {
   const bc = gradeOptions(opts);
   // --- filters ---
-  if (bc.cls === 'loss') return false;                    // 何をしても負け
+  if (bc.cls !== 'win') return false;                     // 勝てる手がない（決着つかず・負けだけの手は正解にしない）
   const nBest = opts.filter(o => o.grade === 'best').length;
   if (nBest / opts.length > 0.4) return false;             // 正解が多すぎる
   const nElig = board.me.filter(c => !c.df).length;
@@ -456,13 +456,9 @@ function basicOK(opts, board, r) {
   if (all.grade === 'best' && none.grade !== 'best' && r[0] < 0.6) return false; // 全員攻撃が正解の問題は減らす
   if (all.grade === 'best' && none.grade === 'best') return false;
   if (none.grade === 'best' && r[1] < 0.7) return false; // 「攻撃しない」が正解の問題は少なめ
-  if (bc.cls === 'win') {
-    const bad = opts.filter(o => o.grade === 'open' || o.grade === 'loss').length;
-    if (bad === 0) return false;                           // どれでも勝てる
-    if (bc.n === 1 && r[2] < 0.5) return false;   // 即死問題は少なめ
-  } else {
-    if (!opts.some(o => o.grade === 'loss')) return false;
-  }
+  const bad = opts.filter(o => o.grade === 'open' || o.grade === 'loss').length;
+  if (bad === 0) return false;                             // どれでも勝てる
+  if (bc.n === 1 && r[2] < 0.5) return false;     // 即死問題は少なめ
   return true;
 }
 
