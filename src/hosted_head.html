@@ -34,7 +34,7 @@ if (!cfg || !cfg.apiKey || String(cfg.apiKey).startsWith('PASTE')) {
     await new Promise(res => { const u = authm.onAuthStateChanged(auth, () => { u(); res(); }); }); // 前回のログイン状態を復元
     return { auth, authm, db: fs.getFirestore(app), fs };
   })());
-  const toErr = e => ({ code: e && e.code === 'unavailable' ? 'unavailable' : 'invalid_argument', message: String(e && e.message || e) });
+  const toErr = e => ({ code: e && (e.code === 'unavailable' || e.code === 'permission-denied') ? e.code : 'invalid_argument', message: String(e && e.message || e) });
   window.__auth = {
     async signIn() {
       const b = await start();
@@ -77,7 +77,8 @@ if (!cfg || !cfg.apiKey || String(cfg.apiKey).startsWith('PASTE')) {
             return () => { dead = true; unsubs.forEach(u => u()); };
           },
           doc: (id) => ({
-            set: (data) => fs.setDoc(fs.doc(db, path, id), data).catch(e => { throw toErr(e); }),
+            // 書き込み時刻はサーバーが付ける（ルールで「前回からの経過時間」を確かめるため）
+            set: (data) => fs.setDoc(fs.doc(db, path, id), Object.assign({}, data, { ts: fs.serverTimestamp() })).catch(e => { throw toErr(e); }),
             delete: () => fs.deleteDoc(fs.doc(db, path, id)).catch(e => { throw toErr(e); }),
           }),
         }),

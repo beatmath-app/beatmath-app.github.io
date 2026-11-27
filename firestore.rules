@@ -1,27 +1,48 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // ---- 調整できる値（アプリ側 src/template4.html の RK_LIMIT と合わせる） ----
+    // 初回登録で載せられる記録の上限（各モード）
+    function createCap() { return 30; }
+    // 1回の書き込みで伸ばせる記録の上限（各モード）
+    function stepCap() { return 10; }
+    // 記録を1問伸ばすのに必要な、前回の書き込みからの秒数
+    function secPerWin() { return 5; }
+
     function validCount(d, k) { return d[k] is int && d[k] >= 0 && d[k] <= 9999; }
-    function validDate(d, k) { return d[k] is string && d[k].size() <= 12; }
+    // 日付は「2026/11/27」の形（記録なしのときは空文字）だけ
+    function validDate(d, k) {
+      return d[k] is string && d[k].matches('^(20[0-9]{2}/(1[0-2]|[1-9])/(3[01]|[12][0-9]|[1-9]))?$');
+    }
     function isGoogleUser(uid) {
       return request.auth != null && request.auth.uid == uid
         && request.auth.token.firebase.sign_in_provider == 'google.com';
     }
     function validRow(d) {
-      return d.keys().hasOnly(['name', 'basic', 'fdn', 'read', 'basicAt', 'fdnAt', 'readAt'])
-        && d.keys().hasAll(['name', 'basic', 'fdn', 'read', 'basicAt', 'fdnAt', 'readAt'])
+      return d.keys().hasOnly(['name', 'basic', 'fdn', 'read', 'basicAt', 'fdnAt', 'readAt', 'ts'])
+        && d.keys().hasAll(['name', 'basic', 'fdn', 'read', 'basicAt', 'fdnAt', 'readAt', 'ts'])
         && d.name is string && d.name.size() <= 16
         && validCount(d, 'basic') && validCount(d, 'fdn') && validCount(d, 'read')
-        && validDate(d, 'basicAt') && validDate(d, 'fdnAt') && validDate(d, 'readAt');
+        && validDate(d, 'basicAt') && validDate(d, 'fdnAt') && validDate(d, 'readAt')
+        && d.ts == request.time;   // 書き込み時刻はサーバーが付ける（serverTimestamp）
     }
-    // ランキング：誰でも読める／Googleでログインした本人が自分の行だけ書ける／記録は下げられない
+    function createOk(n) {
+      return n.basic <= createCap() && n.fdn <= createCap() && n.read <= createCap();
+    }
+    // 記録は下げられない／1回に伸ばせるのは stepCap まで／伸ばした分だけ時間がたっていること
+    function stepOk(n, o) {
+      let gain = (n.basic - o.basic) + (n.fdn - o.fdn) + (n.read - o.read);
+      return n.basic >= o.basic && n.fdn >= o.fdn && n.read >= o.read
+        && n.basic - o.basic <= stepCap() && n.fdn - o.fdn <= stepCap() && n.read - o.read <= stepCap()
+        && (gain == 0 || !('ts' in o) || request.time >= o.ts + duration.value(gain * secPerWin(), 's'));
+    }
+
+    // ランキング：誰でも読める／Googleでログインした本人が自分の行だけ書ける
     match /ranking/{uid} {
       allow read: if true;
-      allow create: if isGoogleUser(uid) && validRow(request.resource.data);
+      allow create: if isGoogleUser(uid) && validRow(request.resource.data) && createOk(request.resource.data);
       allow update: if isGoogleUser(uid) && validRow(request.resource.data)
-        && request.resource.data.basic >= resource.data.basic
-        && request.resource.data.fdn >= resource.data.fdn
-        && request.resource.data.read >= resource.data.read;
+        && stepOk(request.resource.data, resource.data);
       allow delete: if false;   // 削除はオーナーがFirebaseコンソールから行う
     }
   }
