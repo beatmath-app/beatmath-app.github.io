@@ -8,7 +8,7 @@
 
 - 移植先：ユーザーがフォークした Forge（`meatgoodbyeeee-wq/forge` の予定。名前はユーザーに確認）
 - 元ネタ：このリポジトリ（`meatgoodbyeeee-wq/combat-drill`）の `src/`
-- 公開中のアプリ：https://meatgoodbyeeee-wq.github.io/combat-drill/
+- 公開中のアプリ：https://beatmath-app.github.io/
 
 ## 2. コンバットドリルのエンジン構成（`src/`）
 
