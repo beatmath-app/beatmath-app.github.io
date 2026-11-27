@@ -795,7 +795,7 @@ function tryPuzzle(levelName, lazy = false) {
 function basicOK(opts, board, r) {
   const bc = gradeOptions(opts);
   // --- filters ---
-  if (bc.cls === 'loss') return false;                    // 何をしても負け
+  if (bc.cls !== 'win') return false;                     // 勝てる手がない（決着つかず・負けだけの手は正解にしない）
   const nBest = opts.filter(o => o.grade === 'best').length;
   if (nBest / opts.length > 0.4) return false;             // 正解が多すぎる
   const nElig = board.me.filter(c => !c.df).length;
@@ -804,13 +804,9 @@ function basicOK(opts, board, r) {
   if (all.grade === 'best' && none.grade !== 'best' && r[0] < 0.6) return false; // 全員攻撃が正解の問題は減らす
   if (all.grade === 'best' && none.grade === 'best') return false;
   if (none.grade === 'best' && r[1] < 0.7) return false; // 「攻撃しない」が正解の問題は少なめ
-  if (bc.cls === 'win') {
-    const bad = opts.filter(o => o.grade === 'open' || o.grade === 'loss').length;
-    if (bad === 0) return false;                           // どれでも勝てる
-    if (bc.n === 1 && r[2] < 0.5) return false;   // 即死問題は少なめ
-  } else {
-    if (!opts.some(o => o.grade === 'loss')) return false;
-  }
+  const bad = opts.filter(o => o.grade === 'open' || o.grade === 'loss').length;
+  if (bad === 0) return false;                             // どれでも勝てる
+  if (bc.n === 1 && r[2] < 0.5) return false;     // 即死問題は少なめ
   return true;
 }
 
@@ -2008,7 +2004,7 @@ function tryPuzzle(levelName, lazy = false) {
 const PRE_TRICK = 4;
 function fdnOK(p) {
   const opts = p.opts;
-  if (opts.length < 2 || p.best.cls === 'loss') return false;
+  if (opts.length < 2 || p.best.cls !== 'win') return false;   // 勝てる手がない問題は出さない
   if (opts.filter(o => o.grade === 'best').length / opts.length > 0.5) return false;
   // 手札を無視した答えが間違いになる問題だけ
   const nb = p.naiveBest.map(a => a.join());
@@ -2558,6 +2554,7 @@ function render() {
     ・マナは土地の枚数だけで判断（色は足りている）。新しいカードは引かない<br>` : fdn ? `・手札は<b>公開</b>。お互い<b>最適なタイミング</b>で使う／使わない（AIが双方を担当）<br>
     ・マナは土地の枚数だけで判断（色は足りている）。お互い新しいカードは引かない（《一瞬の散漫》のドローも無視）<br>
     ・戦闘前に唱えるインスタントは「前のターンの終了時に唱えた」ものとして扱う<br>` : '・お互いに<b>新しいカードは出さない</b>／トリックなし（盤面だけの殴り合い）<br>'}
+    ${read ? '' : '・どの問題にも<b>勝てる手</b>があり、正解は<b>いちばん早く勝てる手</b>（決着つかず・負けになる手は正解にしない）<br>'}
     ${fdn ? `・手札のクリーチャー：⚡速攻は自分のメインフェイズに唱えて、そのターンから攻撃できる／🌀瞬速はいつでも唱えられるが、出たターンは攻撃できない<br>
     ・自分の手札が2枚のときは、<b>土地はどちらか1枚分しかない</b>（両方は唱えられない）<br>` : ''}
     ・盤面の生物は召喚酔いなし。攻撃した生物はタップし（警戒は除く）、<b>相手のターンにはブロックできない</b><br>
