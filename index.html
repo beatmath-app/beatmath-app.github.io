@@ -38,7 +38,7 @@ if (!cfg || !cfg.apiKey || String(cfg.apiKey).startsWith('PASTE')) {
     await new Promise(res => { const u = authm.onAuthStateChanged(auth, () => { u(); res(); }); }); // 前回のログイン状態を復元
     return { auth, authm, db: fs.getFirestore(app), fs };
   })());
-  const toErr = e => ({ code: e && e.code === 'unavailable' ? 'unavailable' : 'invalid_argument', message: String(e && e.message || e) });
+  const toErr = e => ({ code: e && (e.code === 'unavailable' || e.code === 'permission-denied') ? e.code : 'invalid_argument', message: String(e && e.message || e) });
   window.__auth = {
     async signIn() {
       const b = await start();
@@ -81,7 +81,8 @@ if (!cfg || !cfg.apiKey || String(cfg.apiKey).startsWith('PASTE')) {
             return () => { dead = true; unsubs.forEach(u => u()); };
           },
           doc: (id) => ({
-            set: (data) => fs.setDoc(fs.doc(db, path, id), data).catch(e => { throw toErr(e); }),
+            // 書き込み時刻はサーバーが付ける（ルールで「前回からの経過時間」を確かめるため）
+            set: (data) => fs.setDoc(fs.doc(db, path, id), Object.assign({}, data, { ts: fs.serverTimestamp() })).catch(e => { throw toErr(e); }),
             delete: () => fs.deleteDoc(fs.doc(db, path, id)).catch(e => { throw toErr(e); }),
           }),
         }),
@@ -2924,25 +2925,44 @@ async function resolveNames() {
 const myRow = () => rk.rows.find(r => r.id === rk.uid);
 const myBest = m => Math.max(bestRec[m].best, (myRow() || {})[m] || 0);
 // 自分の記録をランキングへ（ユーザー操作や記録更新のときだけ呼ぶ。1文書1書き込みずつ）
+// サーバーのルール（firestore.rules）に合わせ、初回は各モード RK_LIMIT.create 問まで、
+// 以降は1回に RK_LIMIT.step 問まで、伸ばした1問につき RK_LIMIT.sec 秒あけて登録する。
+// 届かない分は時間をおいて自動で送り直す。
+const RK_LIMIT = { create: 30, step: 10, sec: 5 };
+let rkRetry = null, rkDenied = 0, rkLastWrite = 0;   // rkLastWrite：このページで最後に登録できた時刻
+function pushLater(sec) {
+  if (rkRetry) clearTimeout(rkRetry);
+  rkRetry = setTimeout(() => { rkRetry = null; pushMine(); }, sec * 1000);
+}
 async function pushMine() {
   if (!rk.db || !rk.uid || rk.blocked || rk.state === 'off') return;
   if (rk.state !== 'ready') { rk.pendingPush = true; return; }   // 自分の既存記録を読んでから書く
   if (rk.writing) { rk.dirty = true; return; }
   const mine = myRow();
   const body = { name: playerName.slice(0, 16) };
-  let changed = !mine || (mine.name || '') !== body.name;
+  let changed = !mine || (mine.name || '') !== body.name, gain = 0, clipped = false;
   MODES.forEach(m => {
     const remote = mine ? mine[m] : 0, local = bestRec[m].best;
-    body[m] = Math.max(remote, local);
-    body[m + 'At'] = local > remote ? bestRec[m].date : (mine ? mine[m + 'At'] : '') || bestRec[m].date || '';
+    const cap = HOSTED ? (mine ? remote + RK_LIMIT.step : RK_LIMIT.create) : Infinity;
+    body[m] = Math.max(remote, Math.min(local, cap));
+    if (local > body[m]) clipped = true;
+    gain += body[m] - remote;
+    body[m + 'At'] = body[m] > remote ? bestRec[m].date : (mine ? mine[m + 'At'] : '') || bestRec[m].date || '';
     if (body[m] !== remote) changed = true;
   });
   if (!changed || !MODES.some(m => body[m] > 0)) return;
+  const wait = rkLastWrite + gain * RK_LIMIT.sec * 1000 + 1000 - Date.now();
+  if (HOSTED && gain > 0 && wait > 0) { pushLater(wait / 1000); return; }   // 前回の登録から時間が足りなければ待ってから送る
   rk.writing = true;
-  try { await rk.db.collection('ranking').doc(rk.uid).set(body); }
+  try {
+    await rk.db.collection('ranking').doc(rk.uid).set(body);
+    rkDenied = 0; rkLastWrite = Date.now();
+    if (clipped) pushLater(RK_LIMIT.step * MODES.length * RK_LIMIT.sec + 2);   // 残りは時間をおいて続きを登録
+  }
   catch (e) {
     const code = e && e.code;
     if (code === 'unavailable') setTimeout(pushMine, 1200 + Math.random() * 1200);
+    else if (code === 'permission-denied' && HOSTED && rkDenied < 4) { rkDenied++; pushLater(Math.max(gain, 1) * RK_LIMIT.sec + 2); }   // 前回の登録から時間が足りないだけのことが多い
     else { rk.blocked = true; if (code === 'quota_exceeded') toast('ランキングの保存容量がいっぱいです'); }
   }
   rk.writing = false;
