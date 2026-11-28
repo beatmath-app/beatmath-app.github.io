@@ -148,15 +148,15 @@ function makeVanilla(board, maxPly) {   // engine.js の makeSolver と同じ（
     return Math.max(-400, Math.min(400, v));
   }
 
-  // 決着した時点の盤面の良さ（同じターンの勝ち・負けを比べる用）：残ったクリーチャーと勝った側の残りライフ。1/1024 単位の端数
+  // 決着した時点の盤面の良さ（同じターンの勝ち・負けを比べる用）：自分のクリーチャー数 − 相手のクリーチャー数。
+  // 大きさとライフは見ない（相討ちは損にしない）。1/1024 単位の端数
   function endBonus1(st, iWin) {
     let v = 0;
     for (const side of [0, 1]) {
       const cs = sides[side], sg = side === 0 ? 1 : -1;
-      for (let i = 0; i < cs.length; i++) if (st.a[side] >> i & 1) v += sg * ccValue(cs[i], cs[i].p, cs[i].t);
+      for (let i = 0; i < cs.length; i++) if (st.a[side] >> i & 1) v += sg;
     }
-    v += iWin ? 3 * Math.max(0, st.life[0]) : -3 * Math.max(0, st.life[1]);
-    return Math.max(-400, Math.min(400, v)) / 1024;
+    return v / 1024;
   }
 
   function key(st, ply) {
@@ -609,7 +609,7 @@ function resolveSpell(s, x, ev) {
     }
     case 'DIVINE': x.tg.forEach((tg, k) => { if (ok[k]) cr(tg).ind = true; }); break;
     case 'FLIGHT': { const c = cr(tg0); c.ctr += 1; c.tfly = true; c.prev = true; break; }
-    case 'DISTRACT': { cr(tg0).tp -= 1; break; }
+    case 'DISTRACT': { cr(tg0).tp -= 1; break; }   // 引いたカードはこの問題の中では使えないので数えない
     case 'VEIL': { const c = cr(tg0); c.ctr += 1; c.hex = true; break; }
     case 'BITE': {
       if (!ok[0]) break;
@@ -690,16 +690,16 @@ function nextPhase(s, ev) {
   }
 }
 
-// 決着した時点の盤面の良さ（同じターンの勝ち・負けを比べる用）：残ったクリーチャー・手札・勝った側の残りライフ。
-// 1/1024 単位の端数にして評価値に足す（|端数| < 0.4 なので、何ターン目の決着かは変わらない。2進の端数なので計算の誤差も出ない）
+// 決着した時点の盤面の良さ（同じターンの勝ち・負けを比べる用）：（自分のクリーチャー数 − 相手のクリーチャー数）＋（自分の手札 − 相手の手札）。
+// クリーチャーの大きさとライフは見ない（相討ちは損にしない）。1/1024 単位の端数にして評価値に足す
+// （|端数| < 0.4 なので、何ターン目の決着かは変わらない。2進の端数なので計算の誤差も出ない）
 function endBonus(s, iWin) {
   let v = 0;
   for (const side of [0, 1]) {
     const sg = side === 0 ? 1 : -1;
-    for (const c of s.cr[side]) if (c.alive) v += sg * ccValue(Object.assign({ fly: c.fly }, c.k), c.p + c.ctr, c.t + c.ctr);
-    v += sg * 12 * s.hand[side].length;
+    for (const c of s.cr[side]) if (c.alive) v += sg;
+    v += sg * s.hand[side].length;
   }
-  v += iWin ? 3 * Math.max(0, s.life[0]) : -3 * Math.max(0, s.life[1]);
   return Math.max(-400, Math.min(400, v)) / 1024;
 }
 function terminal(s) {
@@ -723,7 +723,8 @@ function advance(s, ev, maxPly) {
         if (!s.win) {
           if (s.phase === 'w1' && vanillaHook && !disableVanilla && s.ply > 0 && (handCount(s) === 0 || s.ply >= trickPly)) {
             let v = vanillaHook(s);
-            if (Math.abs(v) < 900) v += 12 * (s.hand[0].length - s.hand[1].length);
+            const hd = s.hand[0].length - s.hand[1].length;
+            v += Math.abs(v) < 900 ? 12 * hd : hd / 1024;   // 決着する場合は、決着時の比べ方（数の差）にそろえる
             s.val = v; s.vanilla = true; s.approx = handCount(s) > 0; return s;
           }
           openWindow(s, s.phase);
