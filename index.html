@@ -229,8 +229,6 @@ h1 span{color:var(--gold)}
 .card.dfc{opacity:.75}
 .castbtn{display:block;margin:8px auto 0;padding:7px 12px;border-radius:999px;border:1.5px dashed #b98cff;background:transparent;color:#e6d6ff;font:inherit;font-weight:800;font-size:12px}
 .castbtn.on{background:#b98cff;color:#1d1030;border-style:solid}
-.kwgl{margin-top:4px}
-.kwgl b{color:var(--text)}
 .tools{display:flex;gap:6px;margin-bottom:10px}
 .tools button{flex:1;padding:7px 0;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--text);font:inherit;font-weight:700;font-size:12.5px}
 .tools button b{color:var(--gold)}
@@ -2591,12 +2589,6 @@ const cshort = id => isCre(id) ? `${hcd(id).haste ? '速攻' : '瞬速'}${hcd(id
 const cmana = id => isCre(id) ? `{${hcd(id).cost}}` : CARDS[id].mana;
 const scenShort = h => h ? cname(h) : '基本土地';
 function kwHtml(c) { return kwList(c).map(l => `<span class="chip ${l === '飛行' ? 'fly' : l === '到達' ? 'reach' : l === '速攻' ? 'k3' : 'k2'}">${l}</span>`).join(''); }
-function kwGlossary() {
-  const seen = new Set();
-  for (const side of [0, 1]) for (const c of allCr(side)) for (const l of kwList(c)) seen.add(l.startsWith('護法') ? '護法' : l);
-  if (!seen.size) return '';
-  return '<div class="kwgl"><b>この盤面のキーワード</b><br>' + [...seen].map(l => `・<b>${l}</b>：${KW_DESC[l]}`).join('<br>') + '</div>';
-}
 function creText(id) {
   const d = hcd(id);
   const base = d.haste ? '速攻：戦場に出たターンから攻撃できる。自分のメインフェイズに唱える（戦闘前に出すかは「戦闘前に唱える」ボタンで選ぶ）'
@@ -2752,24 +2744,10 @@ function render() {
   <div class="mid"><span>あなたのターン・戦闘フェイズ</span><button id="prem">${showPremise ? '前提を閉じる' : '前提ルール'}</button></div>
   <div class="premise ${showPremise ? 'show' : ''}">
     <b>この問題の前提</b><br>
-    ${kwGlossary()}<br>
-    ${read ? `・<b>相手の手札は1枚</b>。表示された候補のどれか（<b>どれも同じ確率</b>）<br>
-    ・「基本土地」はインスタントを持っていないケース。<b>次の相手のメインフェイズに土地を出しても、唱えられる呪文は増えない</b><br>
-    ・<b>攻撃を宣言したら、お互いの手札が分かったもの</b>として、双方が最善を尽くす<br>
-    ・評価は<b>勝率</b>：勝ち＝1、負け＝0、決着つかず＝0.5 を候補で平均<br>
-    ・ただし、どの候補でも<b>一度も勝てない手</b>（決着つかず・負けだけ）は、勝率が高くても正解にしない<br>
-    ・正解は、勝てる手の中で勝率が最大の手（5%差まで◎、15%差まで○惜しい。どちらも正解扱い）<br>
-    ・マナは土地の枚数だけで判断（色は足りている）。新しいカードは引かない<br>` : fdn ? `・手札は<b>公開</b>。お互い<b>最適なタイミング</b>で使う／使わない（AIが双方を担当）<br>
-    ・マナは土地の枚数だけで判断（色は足りている）。お互い新しいカードは引かない（《一瞬の散漫》のドローも無視）<br>
-    ・戦闘前に唱えるインスタントは「前のターンの終了時に唱えた」ものとして扱う<br>` : '・お互いに<b>新しいカードは出さない</b>／トリックなし（盤面だけの殴り合い）<br>'}
-    ${read ? '' : '・どの問題にも<b>勝てる手</b>があり、勝てる手はすべて正解。いちばん早く勝てる手のうち、勝った時点の盤面（残ったクリーチャー・手札・ライフ）が最も良い手が◎、遅く勝つ手や盤面で損をする手は○惜しい。決着つかず・負けになる手は不正解<br>'}
-    ${fdn ? `・手札のクリーチャー：⚡速攻は自分のメインフェイズに唱えて、そのターンから攻撃できる／🌀瞬速はいつでも唱えられるが、出たターンは攻撃できない<br>
-    ・自分の手札が2枚のときは、<b>土地はどちらか1枚分しかない</b>（両方は唱えられない）<br>` : ''}
-    ・盤面の生物は召喚酔いなし。攻撃した生物はタップし（警戒は除く）、<b>相手のターンにはブロックできない</b><br>
-    ・タップ中の相手生物は、前のターンに攻撃してきた生物（今ターンはブロック不可）<br>
-    ・飛行は、飛行か到達を持つ生物でしかブロックできない<br>
-    ・複数ブロックされたら、攻撃側がダメージを自由に割り振る（現行ルール）<br>
-    ・お互いに続けて${fdn ? '攻撃も呪文もしなかった' : '攻撃しなかった'}ら、同じ盤面のくり返し（にらみ合い）として決着つかず（同じ盤面では同じ判断をする前提）<br>・最大${P.maxPly / 2}往復先まで読んで評価（それより先で決着がつく場合も「決着つかず」として盤面の評価で比べる）
+    ${read ? `・相手の手札は<b>1枚</b>で、表示された候補のどれか（<b>どれも同じ確率</b>）。「基本土地」は呪文を持っていないケース<br>` : fdn ? '・手札は<b>公開</b><br>' : ''}
+    ${fdn ? '・手札の呪文は、AIがお互い<b>最適なタイミング</b>で使う／使わない<br>' : ''}
+    ・お互い新しいカードは引かず、土地も増えない<br>
+    ・盤面の生物は<b>召喚酔いなし</b>
   </div>
   <div class="zone me">
     <div class="row" id="merow">${B.me.map((c, i) => cardHtml(c, 0, i, (sel.has(i) ? 'attack' : '') + (c.df ? ' dfc' : ''))).join('')}${castSel ? cardHtml(Object.assign({ hs: true }, hcd(castSel)), 0, slotOf(castSel), 'newc' + (sel.has(slotOf(castSel)) ? ' attack' : '')) : ''}</div>
