@@ -18,9 +18,6 @@
 .card.dfc{opacity:.75}
 .castbtn{display:block;margin:8px auto 0;padding:7px 12px;border-radius:999px;border:1.5px dashed #b98cff;background:transparent;color:#e6d6ff;font:inherit;font-weight:800;font-size:12px}
 .castbtn.on{background:#b98cff;color:#1d1030;border-style:solid}
-.tools{display:flex;gap:6px;margin-bottom:10px}
-.tools button{flex:1;padding:7px 0;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--text);font:inherit;font-weight:700;font-size:12.5px}
-.tools button b{color:var(--gold)}
 .revbar{display:flex;justify-content:space-between;align-items:center;background:rgba(255,201,77,.12);border:1.5px solid var(--gold);border-radius:12px;padding:8px 12px;margin-bottom:10px;font-size:13px;font-weight:800}
 .revbar button{background:none;border:none;color:var(--sub);font:inherit;font-size:12px;text-decoration:underline}
 .sec-title.tog{cursor:pointer;justify-content:space-between;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:16px 0 8px}
@@ -44,7 +41,7 @@
 .sbtns{display:flex;gap:6px;margin-top:8px}
 .sbtns button{flex:1;padding:9px 0;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font:inherit;font-weight:700;font-size:12px}
 .copybox{width:100%;height:150px;margin-top:8px;background:#0e1018;color:var(--text);border:1px solid var(--line);border-radius:10px;font:12px/1.6 "M PLUS Rounded 1c",sans-serif;padding:8px}
-.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#000c;color:#fff;font-size:13px;font-weight:700;padding:9px 16px;border-radius:999px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#000d;color:#fff;font-size:13px;font-weight:700;padding:9px 16px;border-radius:16px;max-width:88vw;width:max-content;line-height:1.5;text-align:center;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20}
 .toast.show{opacity:1}
 .modal{position:fixed;inset:0;background:#0009;display:none;align-items:flex-end;justify-content:center;z-index:10}
 .modal.show{display:flex}
@@ -98,9 +95,42 @@
 header h1.logo{display:flex;align-items:center;gap:8px;margin:0;line-height:0}
 .logo-emblem{width:42px;height:42px;flex:none}
 .logo-word{width:83px;height:46px;flex:none}
+/* ---- 上部バー（モード・難易度＋ツール） ---- */
+.bar{display:flex;gap:6px;margin-bottom:10px;align-items:stretch}
+.bar .selbtn{flex:1;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:2px;padding:5px 8px;border-radius:12px;border:1.5px solid var(--spell);background:rgba(185,140,255,.12);color:var(--text);font:inherit;font-weight:800;text-align:left;line-height:1.25}
+.bar .selbtn .m{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar .selbtn .lv{display:block;font-size:11px;color:var(--gold);white-space:nowrap}
+.bar .selbtn .arw{font-size:10px;color:var(--sub);flex:none}
+.bar .ic{flex:none;width:46px;padding:5px 0 4px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--text);font:inherit;font-weight:700;font-size:17px;line-height:1.1;position:relative}
+.bar .ic small{display:block;font-size:8.5px;letter-spacing:-.02em;color:var(--sub);margin-top:2px;white-space:nowrap}
+.bar .ic .n{position:absolute;top:-5px;right:-4px;min-width:17px;padding:0 4px;border-radius:99px;background:var(--gold);color:#222;font-size:10px;font-weight:800;line-height:17px}
+.bar .ic .n.z{display:none}
+.bar .ic .dot{position:absolute;top:-3px;right:-2px;width:9px;height:9px;border-radius:50%;background:var(--bad)}
+.selsheet .seg{margin-bottom:6px}
+.selsheet .lbl{font-size:12px;color:var(--sub);font-weight:800;margin:10px 0 6px}
+.selsheet .desc{font-size:12px;color:var(--sub);line-height:1.6;min-height:3.2em;margin:4px 2px 0}
+.selsheet .howto{display:block;margin:12px auto 0;background:none;border:none;color:var(--sub);font:inherit;font-size:12px;text-decoration:underline}
+/* ---- キーワードのタップ説明・凡例・共有 ---- */
+.card .kw .chip[data-kw]{position:relative;cursor:pointer}
+.card .kw .chip[data-kw]::after{content:'';position:absolute;inset:-7px -3px}
+.lgbtn{display:inline-block;margin:6px 0 0;background:none;border:none;padding:2px 0;color:var(--sub);font:inherit;font-size:12px;font-weight:700;text-decoration:underline}
+.lgbox{font-size:12px;color:var(--sub);line-height:1.7;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 10px;margin-top:6px}
+.lgbox b{color:var(--text)}
+.sharebtn{display:block;width:100%;margin-top:14px;padding:10px 0;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--text);font:inherit;font-weight:800;font-size:13px}
+.shsheet .sbtns{flex-direction:column}
+.shsheet .sbtns button{padding:12px 0;font-size:14px}
+.shsheet .sid{font-size:11px;color:var(--sub);word-break:break-all;margin-top:8px}
+/* ---- 遊び方 ---- */
+.tut{text-align:center}
+.tut .stepn{font-size:12px;color:var(--sub);font-weight:800}
+.tut .big{font-size:42px;line-height:1.2;margin:10px 0 6px}
+.tut h3{font-size:17px;margin:0 0 8px}
+.tut p{font-size:13.5px;color:var(--sub);line-height:1.7;margin:0 0 4px}
+.tut .dots{display:flex;gap:6px;justify-content:center;margin:14px 0 4px}
+.tut .dots i{width:7px;height:7px;border-radius:50%;background:var(--line)}
+.tut .dots i.on{background:var(--gold)}
+.tut .btnrow{display:flex;gap:8px;margin-top:12px}
 /* ---- 称号バナー ---- */
-.tools button{font-size:12px;white-space:nowrap}
-.tools .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--bad);margin-left:2px;vertical-align:top}
 .bn{position:relative;line-height:0}
 .bn img{width:100%;height:auto;display:block;filter:drop-shadow(0 4px 10px #000a)}
 .bn .shine{position:absolute;inset:0;-webkit-mask-size:100% 100%;mask-size:100% 100%;background:linear-gradient(115deg,transparent 40%,#ffffff70 50%,transparent 60%);background-size:300% 100%;animation:shine 3.4s ease-in-out infinite;pointer-events:none;mix-blend-mode:overlay}
@@ -136,21 +166,12 @@ header h1.logo{display:flex;align-items:center;gap:8px;margin:0;line-height:0}
   <h1 class="logo" aria-label="殴り算 BeatMath"><svg class="logo-emblem" viewBox="0 0 220 220" aria-hidden="true"><path d="M110 14L188 40V108C188 158 152 188 110 206C68 188 32 158 32 108V40Z" fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linejoin="round"/><circle cx="110" cy="70" r="15" fill="#FFFFFF"/><circle cx="110" cy="152" r="15" fill="#FFFFFF"/><g transform="rotate(-45 110 110)" stroke="#14161f" stroke-width="4" paint-order="stroke"><path d="M62 101H210L236 110L210 119H62Z" fill="#FF6B2C"/><rect x="48" y="80" width="13" height="60" rx="3" fill="#FFFFFF"/><rect x="18" y="104" width="31" height="12" rx="3" fill="#FFFFFF"/><circle cx="12" cy="110" r="9" fill="#FFFFFF"/></g></svg><svg class="logo-word" viewBox="-4 -12 404 224" aria-hidden="true"><g transform="translate(0 114.4) scale(0.13)"><defs><clipPath id="hdL"><path d="M-500 -1500H2620L-500 1620Z"/></clipPath><clipPath id="hdR"><path d="M2620 -1500H4000V1500H-380Z"/></clipPath></defs><path d="M2734 -187L2650 -170L2663 -236Q2678 -241 2685 -245Q2692 -249 2695 -253L2655 -249L2659 -265L2667 -266Q2682 -269 2702 -275.5Q2722 -282 2739.5 -289Q2757 -296 2769.5 -302.5Q2782 -309 2784 -313L2841 -600Q2855 -606 2862.5 -610.5Q2870 -615 2876 -619L2808 -661Q2820 -674 2827 -688Q2834 -702 2829.5 -714.5Q2825 -727 2806 -737.5Q2787 -748 2748 -755L3004 -804Q3019 -807 3025 -814Q3013 -823 2999 -833Q2985 -843 2972 -852Q2959 -861 2948 -868.5Q2937 -876 2930 -879L2850 -787L2695 -757Q2719 -782 2733.5 -799Q2748 -816 2763 -835Q2777 -838 2785 -842Q2793 -846 2797 -851L2648 -862Q2636 -834 2621 -804.5Q2606 -775 2586 -739Q2564 -758 2543.5 -773.5Q2523 -789 2514 -795L2441 -708L2304 -682Q2321 -703 2331.5 -717.5Q2342 -732 2353 -748Q2367 -750 2376 -754Q2385 -758 2390 -763L2242 -784Q2204 -690 2148.5 -604.5Q2093 -519 2036 -456L2037 -455Q2104 -493 2168 -545Q2232 -597 2291 -667L2334 -675Q2341 -653 2343 -627Q2345 -601 2339 -575Q2361 -558 2388.5 -567.5Q2416 -577 2433 -597Q2441 -606 2444.5 -617.5Q2448 -629 2443.5 -640.5Q2439 -652 2422.5 -663.5Q2406 -675 2374 -683L2576 -722Q2554 -684 2535 -656Q2516 -628 2498 -606L2500 -605Q2543 -630 2589 -663Q2635 -696 2680 -742L2705 -746Q2715 -726 2719.5 -700.5Q2724 -675 2720 -647Q2723 -646 2726 -644.5Q2729 -643 2739 -641L2704 -607L2360 -541L2229 -565L2145 -147L2157 -150Q2183 -154 2210 -166.5Q2237 -179 2267 -196L2266.8 -195.1Q2264.6 -192.8 2262 -190L2265.5 -190.3Q2257.5 -160.1 2252.5 -139Q2247 -116 2238 -91L1969 -40L1971 -27L2234 -77Q2217 -38 2193 -5Q2169 28 2131.5 58Q2094 88 2041 117Q1988 146 1913 178L1913 181Q2031 146 2108.5 112.5Q2186 79 2235 45.5Q2284 12 2311 -24Q2338 -60 2357 -102L2521 -133L2480 71L2497 69Q2516 65 2535.5 59Q2555 53 2571 47Q2587 41 2598.5 35.5Q2610 30 2610 27L2647 -157L2899 -206Q2914 -209 2921 -216Q2908 -226 2893 -237Q2878 -248 2864 -257.5Q2850 -267 2838 -274.5Q2826 -282 2820 -286ZM916 -128Q863 -132 813 -139.5Q763 -147 715 -166Q775 -228 819 -291Q863 -354 901 -425Q917 -430 925.5 -433Q934 -436 940 -441L848.9 -511.9L870 -532L841 -526Q836.6 -525.2 832.5 -524.6L832 -525L878 -534Q942 -546 973.5 -570.5Q1005 -595 1011 -625Q1015 -641 1010.5 -648Q1006 -655 989 -662L986 -663L979 -662Q973 -659 965.5 -657Q958 -655 953 -653Q949 -651 941 -649.5Q933 -648 930 -647L920 -645L912 -644Q901 -642 899 -647Q897 -652 899 -662L929 -811Q952 -819 963 -826L878 -884L804 -810L749 -799L616 -819L591 -694Q585 -663 575 -628Q565 -593 548 -556Q531 -519 505 -480Q479 -441 439 -404Q516 -443 565.5 -486Q615 -529 645 -570.5Q675 -612 688.5 -649.5Q702 -687 708 -716L721 -781L819 -800L779 -604Q774 -576 772.5 -558.5Q771 -541 776.5 -532Q782 -523 797.5 -522Q810.6 -521.2 832.5 -524.6L848.9 -511.9L767 -434L477 -379L479 -366L542 -378Q542 -296 553.5 -237.5Q565 -179 589 -133Q520 -59 436.5 3.5Q353 66 251 119Q363 78 454.5 27Q546 -24 624 -85Q656 -51 693.5 -29.5Q731 -8 779 7Q803 -41 837.5 -75Q872 -109 916 -128ZM1306 -774Q1330 -742 1336.5 -704Q1343 -666 1332 -611Q1329 -597 1323.5 -579.5Q1318 -562 1311 -542Q1304 -521 1296 -499.5Q1288 -478 1278 -454Q1261 -407 1246 -363.5Q1231 -320 1225 -286Q1218 -251 1216 -224Q1214 -197 1221 -175Q1227 -154 1241 -145Q1255 -136 1281 -141Q1306 -146 1324.5 -162.5Q1343 -179 1348 -201Q1355 -240 1357.5 -270.5Q1360 -301 1367 -339Q1376 -384 1395.5 -431.5Q1415 -479 1449 -531Q1486 -589 1522.5 -621.5Q1559 -654 1589 -660Q1638 -669 1651 -614.5Q1664 -560 1637 -424Q1625 -365 1601.5 -297.5Q1578 -230 1532.5 -160.5Q1487 -91 1412 -23Q1337 45 1223 107L1224 111Q1350 72 1445.5 15Q1541 -42 1608 -111Q1675 -180 1716 -260.5Q1757 -341 1774 -428Q1792 -516 1788.5 -574.5Q1785 -633 1765 -665.5Q1745 -698 1712.5 -709Q1680 -720 1640 -712Q1590 -702 1538.5 -657Q1487 -612 1430 -530Q1418 -514 1407.5 -512Q1404.7 -511.5 1402.9 -512.6Q1398.1 -515.6 1401 -531Q1403 -540 1412 -562Q1421 -584 1436 -610Q1440 -619 1445.5 -628Q1451 -637 1456 -647Q1460 -656 1463.5 -665.5Q1467 -675 1470 -686Q1472 -699 1466.5 -713Q1461 -727 1449 -740Q1437 -753 1420 -762.5Q1403 -772 1383 -776Q1367 -779 1345.5 -778Q1324 -777 1306 -774ZM295 -52L113 -17L225 -576L225.1 -575.7L219 -545L234.7 -555.1Q253.6 -513.7 268 -476.5Q286 -430 298 -381Q269 -303 233 -227.5Q197 -152 155 -86Q197 -127 235 -173Q273 -219 315 -281Q316 -248 316 -226.5Q316 -205 314 -187Q342 -166 368 -178Q394 -190 410 -223Q428 -259 428 -311.5Q428 -364 395 -421Q420 -471 440.5 -517Q461 -563 479 -607Q495 -611 503 -615Q511 -619 515 -623L372 -630Q366 -601 357.5 -569Q349 -537 335 -493Q309 -513 286 -527.5Q263 -542 236 -556L234.7 -555.1Q230 -565.3 225.1 -575.7L242 -660L550 -720Q567 -723 571 -729Q560 -739 546.5 -749.5Q533 -760 520 -769Q507 -778 496 -785.5Q485 -793 479 -796L398 -703L264 -677L130 -715L-10 -13Q-38 7 -60 28L61 68L120 -6L450 -70Q465 -72 471 -79Q459 -89 445 -98.5Q431 -108 417.5 -117Q404 -126 393 -133.5Q382 -141 375 -145ZM2677 -397L2659 -310L2285 -238L2302 -325ZM2305 -338L2322 -425L2697 -497L2679 -410ZM2717 -597L2699 -510L2325 -438L2342 -525ZM2265.5 -190.3Q2266.1 -192.6 2266.8 -195.1Q2273.7 -202.5 2276 -204Q2279 -206 2279 -207L2282 -225L2657 -297L2647 -248L2542 -236L2523 -146L2363 -115Q2371 -136 2375.5 -151.5Q2380 -167 2386 -187Q2401 -192 2408.5 -196Q2416 -200 2421 -205ZM648 -202Q606 -232 579.5 -273Q553 -314 542 -379L777 -424Q750 -363 719.5 -309.5Q689 -256 648 -202Z" fill="#FFFFFF" clip-path="url(#hdL)"/><g transform="translate(54 -54)"><path d="M2734 -187L2650 -170L2663 -236Q2678 -241 2685 -245Q2692 -249 2695 -253L2655 -249L2659 -265L2667 -266Q2682 -269 2702 -275.5Q2722 -282 2739.5 -289Q2757 -296 2769.5 -302.5Q2782 -309 2784 -313L2841 -600Q2855 -606 2862.5 -610.5Q2870 -615 2876 -619L2808 -661Q2820 -674 2827 -688Q2834 -702 2829.5 -714.5Q2825 -727 2806 -737.5Q2787 -748 2748 -755L3004 -804Q3019 -807 3025 -814Q3013 -823 2999 -833Q2985 -843 2972 -852Q2959 -861 2948 -868.5Q2937 -876 2930 -879L2850 -787L2695 -757Q2719 -782 2733.5 -799Q2748 -816 2763 -835Q2777 -838 2785 -842Q2793 -846 2797 -851L2648 -862Q2636 -834 2621 -804.5Q2606 -775 2586 -739Q2564 -758 2543.5 -773.5Q2523 -789 2514 -795L2441 -708L2304 -682Q2321 -703 2331.5 -717.5Q2342 -732 2353 -748Q2367 -750 2376 -754Q2385 -758 2390 -763L2242 -784Q2204 -690 2148.5 -604.5Q2093 -519 2036 -456L2037 -455Q2104 -493 2168 -545Q2232 -597 2291 -667L2334 -675Q2341 -653 2343 -627Q2345 -601 2339 -575Q2361 -558 2388.5 -567.5Q2416 -577 2433 -597Q2441 -606 2444.5 -617.5Q2448 -629 2443.5 -640.5Q2439 -652 2422.5 -663.5Q2406 -675 2374 -683L2576 -722Q2554 -684 2535 -656Q2516 -628 2498 -606L2500 -605Q2543 -630 2589 -663Q2635 -696 2680 -742L2705 -746Q2715 -726 2719.5 -700.5Q2724 -675 2720 -647Q2723 -646 2726 -644.5Q2729 -643 2739 -641L2704 -607L2360 -541L2229 -565L2145 -147L2157 -150Q2183 -154 2210 -166.5Q2237 -179 2267 -196L2266.8 -195.1Q2264.6 -192.8 2262 -190L2265.5 -190.3Q2257.5 -160.1 2252.5 -139Q2247 -116 2238 -91L1969 -40L1971 -27L2234 -77Q2217 -38 2193 -5Q2169 28 2131.5 58Q2094 88 2041 117Q1988 146 1913 178L1913 181Q2031 146 2108.5 112.5Q2186 79 2235 45.5Q2284 12 2311 -24Q2338 -60 2357 -102L2521 -133L2480 71L2497 69Q2516 65 2535.5 59Q2555 53 2571 47Q2587 41 2598.5 35.5Q2610 30 2610 27L2647 -157L2899 -206Q2914 -209 2921 -216Q2908 -226 2893 -237Q2878 -248 2864 -257.5Q2850 -267 2838 -274.5Q2826 -282 2820 -286ZM916 -128Q863 -132 813 -139.5Q763 -147 715 -166Q775 -228 819 -291Q863 -354 901 -425Q917 -430 925.5 -433Q934 -436 940 -441L848.9 -511.9L870 -532L841 -526Q836.6 -525.2 832.5 -524.6L832 -525L878 -534Q942 -546 973.5 -570.5Q1005 -595 1011 -625Q1015 -641 1010.5 -648Q1006 -655 989 -662L986 -663L979 -662Q973 -659 965.5 -657Q958 -655 953 -653Q949 -651 941 -649.5Q933 -648 930 -647L920 -645L912 -644Q901 -642 899 -647Q897 -652 899 -662L929 -811Q952 -819 963 -826L878 -884L804 -810L749 -799L616 -819L591 -694Q585 -663 575 -628Q565 -593 548 -556Q531 -519 505 -480Q479 -441 439 -404Q516 -443 565.5 -486Q615 -529 645 -570.5Q675 -612 688.5 -649.5Q702 -687 708 -716L721 -781L819 -800L779 -604Q774 -576 772.5 -558.5Q771 -541 776.5 -532Q782 -523 797.5 -522Q810.6 -521.2 832.5 -524.6L848.9 -511.9L767 -434L477 -379L479 -366L542 -378Q542 -296 553.5 -237.5Q565 -179 589 -133Q520 -59 436.5 3.5Q353 66 251 119Q363 78 454.5 27Q546 -24 624 -85Q656 -51 693.5 -29.5Q731 -8 779 7Q803 -41 837.5 -75Q872 -109 916 -128ZM1306 -774Q1330 -742 1336.5 -704Q1343 -666 1332 -611Q1329 -597 1323.5 -579.5Q1318 -562 1311 -542Q1304 -521 1296 -499.5Q1288 -478 1278 -454Q1261 -407 1246 -363.5Q1231 -320 1225 -286Q1218 -251 1216 -224Q1214 -197 1221 -175Q1227 -154 1241 -145Q1255 -136 1281 -141Q1306 -146 1324.5 -162.5Q1343 -179 1348 -201Q1355 -240 1357.5 -270.5Q1360 -301 1367 -339Q1376 -384 1395.5 -431.5Q1415 -479 1449 -531Q1486 -589 1522.5 -621.5Q1559 -654 1589 -660Q1638 -669 1651 -614.5Q1664 -560 1637 -424Q1625 -365 1601.5 -297.5Q1578 -230 1532.5 -160.5Q1487 -91 1412 -23Q1337 45 1223 107L1224 111Q1350 72 1445.5 15Q1541 -42 1608 -111Q1675 -180 1716 -260.5Q1757 -341 1774 -428Q1792 -516 1788.5 -574.5Q1785 -633 1765 -665.5Q1745 -698 1712.5 -709Q1680 -720 1640 -712Q1590 -702 1538.5 -657Q1487 -612 1430 -530Q1418 -514 1407.5 -512Q1404.7 -511.5 1402.9 -512.6Q1398.1 -515.6 1401 -531Q1403 -540 1412 -562Q1421 -584 1436 -610Q1440 -619 1445.5 -628Q1451 -637 1456 -647Q1460 -656 1463.5 -665.5Q1467 -675 1470 -686Q1472 -699 1466.5 -713Q1461 -727 1449 -740Q1437 -753 1420 -762.5Q1403 -772 1383 -776Q1367 -779 1345.5 -778Q1324 -777 1306 -774ZM295 -52L113 -17L225 -576L225.1 -575.7L219 -545L234.7 -555.1Q253.6 -513.7 268 -476.5Q286 -430 298 -381Q269 -303 233 -227.5Q197 -152 155 -86Q197 -127 235 -173Q273 -219 315 -281Q316 -248 316 -226.5Q316 -205 314 -187Q342 -166 368 -178Q394 -190 410 -223Q428 -259 428 -311.5Q428 -364 395 -421Q420 -471 440.5 -517Q461 -563 479 -607Q495 -611 503 -615Q511 -619 515 -623L372 -630Q366 -601 357.5 -569Q349 -537 335 -493Q309 -513 286 -527.5Q263 -542 236 -556L234.7 -555.1Q230 -565.3 225.1 -575.7L242 -660L550 -720Q567 -723 571 -729Q560 -739 546.5 -749.5Q533 -760 520 -769Q507 -778 496 -785.5Q485 -793 479 -796L398 -703L264 -677L130 -715L-10 -13Q-38 7 -60 28L61 68L120 -6L450 -70Q465 -72 471 -79Q459 -89 445 -98.5Q431 -108 417.5 -117Q404 -126 393 -133.5Q382 -141 375 -145ZM2677 -397L2659 -310L2285 -238L2302 -325ZM2305 -338L2322 -425L2697 -497L2679 -410ZM2717 -597L2699 -510L2325 -438L2342 -525ZM2265.5 -190.3Q2266.1 -192.6 2266.8 -195.1Q2273.7 -202.5 2276 -204Q2279 -206 2279 -207L2282 -225L2657 -297L2647 -248L2542 -236L2523 -146L2363 -115Q2371 -136 2375.5 -151.5Q2380 -167 2386 -187Q2401 -192 2408.5 -196Q2416 -200 2421 -205ZM648 -202Q606 -232 579.5 -273Q553 -314 542 -379L777 -424Q750 -363 719.5 -309.5Q689 -256 648 -202Z" fill="#FFFFFF" clip-path="url(#hdR)"/></g><path d="M929 191L2071 -951" stroke="#FF6B2C" stroke-width="31"/></g><g transform="translate(4.89 201.79) scale(0.06113)"><path d="M2816 -762L2834 -597L2880 -606L2916 -805L2245 -675L2202 -476L2248 -485L2335 -670L2442 -690.3L2442 -694.1L2642 -733.1L2642 -683.1L2484.4 -652.4Q2473.6 -593.5 2462.5 -537.5Q2447 -459 2431 -380L2423 -336Q2392 -182 2357 -21L2251 9L2247 29L2622 -43L2626 -63L2522 -53Q2536 -134 2552 -212Q2568 -290 2583 -367L2592 -410Q2608 -490 2623.5 -568.5Q2639 -647 2658 -732ZM932.6 2L947 -70L951.3 -70Q962.4 -130 974 -188Q987.9 -257.5 1002.6 -330L999 -330L1023 -450L1026.2 -450Q1036.3 -500.1 1046 -548Q1054.3 -588.7 1063 -630L1059 -630L1079.2 -731.2L825 -682L821 -662L913 -672Q898 -590 883.5 -512Q869 -434 854 -356L845 -312Q829 -234 812.5 -156Q796 -78 778 4L683 31L679 51ZM98 -677L94 -657L185 -667Q171 -586 156.5 -509.5Q142 -433 127 -356L119 -320Q103 -239 86 -157.5Q69 -76 50 9L-45 36L-49 56L201.6 7L217 -70L221.6 -70Q232.2 -128.6 243.5 -186.5Q258.5 -263.5 275.6 -350L273 -350L297 -470L299.8 -470Q307.8 -509.4 315.5 -547Q324.8 -592.8 335.1 -640L331 -640L348 -725.2ZM1996 -93L1889 -752L1791 -733L1754.6 -660.2L1827.4 -140L1823.3 -140L1834 -63L1737 -34L1734 -15L2073 -80L2076 -99ZM258 -25.2L253.6 -3.2L273 -7Q377 -27 448 -58.5Q519 -90 563.5 -126Q608 -162 630 -200.5Q652 -239 659 -274Q667 -311 658 -339Q649 -367 618 -384Q587 -401 530 -406Q473 -411 384 -402Q469 -432 525.5 -461Q582 -490 615.5 -518.5Q649 -547 665 -574.5Q681 -602 686 -629Q693 -665 686 -693Q679 -721 652 -737.5Q625 -754 577.5 -757Q530 -760 456 -746L400 -735.2L395.4 -712.1L405 -714Q489 -730 518 -697.5Q547 -665 532 -593Q517 -515 466 -464Q415.4 -413.4 332.5 -397.3L328.3 -376.5L336 -378Q434 -397 473 -363.5Q512 -330 494 -239Q477 -153 418.5 -99Q360 -45 272 -28ZM1567 -230L1719.9 -551.1L1715.5 -582.2L1416 16L1329 43L1325 64L1548 21L1552 1L1454 7L1556 -209L1762.2 -248.4L1759.6 -267.2ZM1317 -258L1272 -249L1191 -72L989.6 -33L984.6 -8.1L1279 -65ZM1126.4 -716.9L1305 -751L1321 -601L1367 -610L1404 -794L1131.2 -741.2ZM1057.5 -372.3L1166 -393L1159 -290L1197 -297L1245 -535L1207 -528L1169 -414L1061.7 -393.4Z" fill="#FF6B2C"/><path d="M5305 -762L5323 -597L5369 -606L5405 -805L4734 -675L4691 -476L4737 -485L4824 -670L4931 -690.3L4931 -694.1L5131 -733.1L5131 -683.1L4973.4 -652.4Q4962.6 -593.5 4951.5 -537.5Q4936 -459 4920 -380L4912 -336Q4881 -182 4846 -21L4740 9L4736 29L5111 -43L5115 -63L5011 -53Q5025 -134 5041 -212Q5057 -290 5072 -367L5081 -410Q5097 -490 5112.5 -568.5Q5128 -647 5147 -732ZM6260 -797L6264 -817L5919 -751L5915 -731L6000 -740Q5986 -659 5971.5 -581Q5965.9 -550.8 5960 -520L5965.2 -520L5919 -300L5915.8 -300Q5907.7 -261 5900 -224.5Q5883 -144 5865 -64L5777 -38L5773 -18L6117 -84L6121 -104L6032 -96Q6046 -178 6061.5 -255.5Q6077 -333 6093 -410L6101 -454Q6117 -532 6132.5 -610.5Q6148 -689 6167 -772ZM5628 -300L5672 -520L5677 -520L5678 -525Q5694 -603 5712 -684L5800 -709L5804 -729L5459 -663L5455 -643L5546 -651Q5530 -570 5515 -492L5485 -336L5476 -292L5444 -136Q5428 -58 5411 24L5316 50L5313 69L5658 3L5662 -16L5577 -7Q5591 -89 5606.5 -169.5Q5618.5 -231.6 5632.5 -300ZM3918 -812L3922 -832L3674.5 -783.8L3626.4 -560L3623.1 -560L3582 -369Q3569 -308 3554.5 -234Q3540 -160 3521 -78L3429 -51L3425 -32L3774 -100L3778 -119L3687 -110Q3702 -190 3717 -268L3747 -424L3756 -468L3788 -624Q3804 -702 3823 -786ZM4485 -93L4378 -752L4280 -733L4243.6 -660.2L4316.4 -140L4312.3 -140L4323 -63L4226 -34L4223 -15L4562 -80L4565 -99ZM3344.9 -152.9L3328.7 -230L3332.6 -230L3231 -699L3074.9 -668.8L3098.8 -560L3095.8 -560L3217 9L3262 -0ZM3048.8 -560L3047.1 -567.8L2923 32L2807 68L2803 88L3068 37L3072 17L2960 24L3021 -281Q3025 -305 3032 -340Q3039 -375 3047 -419Q3055 -463 3064 -514Q3068 -536.6 3072.2 -560ZM4056 -230L4208.9 -551.1L4204.5 -582.2L3905 16L3818 43L3814 64L4037 21L4041 1L3943 7L4045 -209L4251.2 -248.4L4248.6 -267.2ZM3600.5 -672.3L3358.6 -230L3378.7 -230L3380.9 -219.4L3583.5 -593.1ZM5892.4 -411.7L5692.6 -373.2L5688 -350.1L5887.6 -388.7ZM3026.9 -659.5L2957 -646L2953 -626L3032.8 -632.7Z" fill="#FFFFFF"/></g></svg></h1>
   <div class="score" id="score"></div>
 </header>
-<div class="seg mode" id="modes">
-  <button data-m="basic">基本</button>
-  <button data-m="fdn">インスタント</button>
-  <button data-m="read">読み</button>
-</div>
-<div class="seg" id="levels">
-  <button data-lv="easy">かんたん</button>
-  <button data-lv="normal">ふつう</button>
-  <button data-lv="hard">むずかしい</button>
-</div>
-<div class="tools">
-  <button id="revBtn">📚 復習 <b id="revN">0</b>問</button>
-  <button id="statBtn">📊 成績</button>
-  <button id="recBtn">🏆 ランキング</button>
-  <button id="cardBtn">🎖 称号</button>
+<div class="bar">
+  <button class="selbtn" id="selBtn"></button>
+  <button class="ic" id="revBtn">📚<small>復習</small><span class="n" id="revN">0</span></button>
+  <button class="ic" id="statBtn">📊<small>成績</small></button>
+  <button class="ic" id="recBtn">🏆<small>ランキング</small></button>
+  <button class="ic" id="cardBtn"></button>
 </div>
 
 <div id="app"><div class="loading">問題を作成中…</div></div>
@@ -272,8 +293,10 @@ const store = {
 };
 const MODES = ['basic', 'fdn', 'read'], LEVELS = ['easy', 'normal', 'hard'];
 const MODE_JA = { basic: '基本', fdn: 'インスタント', read: '読み' }, LEVEL_JA = { easy: 'かんたん', normal: 'ふつう', hard: 'むずかしい' };
-let mode = store.get('cd_mode', 'fdn'); if (!MODES.includes(mode)) mode = 'fdn';
-let level = store.get('cd_level', 'normal'); if (!LEVELS.includes(level)) level = 'normal';
+// 初めての人は「基本・かんたん」から。以前から遊んでいる人（成績あり）は、これまでの初期値（インスタント・ふつう）のまま
+const NEWBIE = !store.get('cd_stats3', null) && !store.get('cd_mode', null);
+let mode = store.get('cd_mode', NEWBIE ? 'basic' : 'fdn'); if (!MODES.includes(mode)) mode = 'basic';
+let level = store.get('cd_level', NEWBIE ? 'easy' : 'normal'); if (!LEVELS.includes(level)) level = 'easy';
 const emptyStats = () => ({ n: 0, best: 0, slow: 0, streak: 0, top: 0 });
 let stats = store.get('cd_stats3', {});
 MODES.forEach(m => { stats[m] = stats[m] || {}; LEVELS.forEach(l => { stats[m][l] = stats[m][l] || emptyStats(); }); });
@@ -291,7 +314,7 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;'
 // ---------- state ----------
 let castSel = null;
 let puzzle = null, sel = new Set(), answered = false, viewIdx = -1, viewCell = null, lineOpen = false, scrollToLine = false;
-let showPremise = false, showCard = -1, reviewing = false, loadToken = 0;
+let showPremise = false, showLegend = false, showCard = -1, reviewing = false, loadToken = 0;
 const next = {};
 const app = document.getElementById('app');
 const NM = [['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'], ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧']];
@@ -388,7 +411,9 @@ function bankLookup(id) {
   const p = bankMap.get(id);
   return p ? JSON.parse(JSON.stringify(p)) : null;
 }
-function setHash(id) { try { if (location.hash !== '#' + id) location.hash = id; } catch (e) {} }
+// 問題IDはアドレスバーに出さない（共有は「リンク」ボタンから。履歴も増やさない）。
+// 共有リンク（#問題ID）から開いたときは、読み込んだあとでアドレスからIDを消す
+function setHash() { try { if (location.hash) history.replaceState(null, '', location.pathname + location.search); } catch (e) {} }
 
 // ---------- 出題 ----------
 function k(m, l) { return m + ':' + l; }
@@ -476,7 +501,7 @@ async function loadId(id, fresh) {
 }
 
 // ---------- 復習 ----------
-function saveReview() { store.set('cd_review', review); document.getElementById('revN').textContent = review.length; }
+function saveReview() { store.set('cd_review', review); const n = document.getElementById('revN'); n.textContent = review.length; n.classList.toggle('z', !review.length); }
 function startReview() {
   if (!review.length) { toast('復習する問題はありません（間違えた問題がここにたまります）'); return; }
   reviewing = true; loadId(review[0].id);
@@ -499,7 +524,9 @@ const cname = id => isCre(id) ? `《${creName(hcd(id))}》` : `《${CARDS[id].ja
 const cshort = id => isCre(id) ? `${hcd(id).haste ? '速攻' : '瞬速'}${hcd(id).p}/${hcd(id).t}` : CARDS[id].ja;
 const cmana = id => isCre(id) ? `{${hcd(id).cost}}` : CARDS[id].mana;
 const scenShort = h => h ? cname(h) : '基本土地';
-function kwHtml(c) { return kwList(c).map(l => `<span class="chip ${l === '飛行' ? 'fly' : l === '到達' ? 'reach' : l === '速攻' ? 'k3' : 'k2'}">${l}</span>`).join(''); }
+function kwHtml(c) { return kwList(c).map(l => `<span class="chip ${l === '飛行' ? 'fly' : l === '到達' ? 'reach' : l === '速攻' ? 'k3' : 'k2'}" data-kw="${l}">${l}</span>`).join(''); }
+const kwDesc = l => l.startsWith('護法') ? KW_DESC['護法'].replace('{N}', l.slice(2)) : KW_DESC[l];
+const kwToast = l => toast(`${l}：${kwDesc(l)}`, 3200);
 function creText(id) {
   const d = hcd(id);
   const base = d.haste ? '速攻：戦場に出たターンから攻撃できる。自分のメインフェイズに唱える（戦闘前に出すかは「戦闘前に唱える」ボタンで選ぶ）'
@@ -668,7 +695,7 @@ function render() {
   </div>`;
   if (!answered) {
     html += `<div class="q">どの生物で攻撃する？</div>
-    <div class="hint" style="text-align:center;margin-top:-4px">カードをタップして攻撃する生物を選択（0体でもOK・防衛は攻撃不可）${read ? '<br>相手の手札の候補をタップすると効果を確認できます' : fdn ? '<br>手札のインスタント・瞬速クリーチャーはAIが最適なタイミングで使います' : ''}</div>
+    <div class="hint" style="text-align:center;margin-top:-4px">タップで攻撃する生物を選ぶ（0体でもOK）<br>能力名${read ? '・相手の手札の候補' : fdn ? '・手札' : ''}はタップで説明</div>
     <div class="actions"><button class="btn" id="go">${sel.size ? '攻撃を宣言' : '攻撃しないで確定'}</button></div>`;
   } else html += read ? readResultHtml() : resultHtml();
   app.innerHTML = html;
@@ -729,7 +756,7 @@ function resultHtml() {
         <span class="atk">${optLabel(o)}${o === you ? '<span class="tag you">あなた</span>' : ''}${o.grade === 'best' ? '<span class="tag ai">AI</span>' : ''}${isNaive(o) && o.grade !== 'best' ? '<span class="tag naive">手札無視なら正解</span>' : ''}</span>
         <span class="out">${outLabel(o.c)}${sameTurnWorse(o, bests[0]) ? '（盤面で損）' : ''}</span></div>`;
     }).join('')}</div>
-    <div class="hint">◎最善 ○勝てるが遅い／盤面で損（正解扱い） △決着つかず／見劣り ×負け</div>
+    ${legendHtml('<b>◎</b> 最善　<b>○</b> 勝てるが遅い／盤面で損（正解扱い）<br><b>△</b> 決着つかず／見劣り　<b>×</b> 負け')}
     ${lineSection(optLabel(vo), `<div class="tabs">
       <button data-v="${yi}" class="${viewIdx === yi ? 'on' : ''}">あなたの攻撃</button>
       <button data-v="${bi}" class="${viewIdx === bi ? 'on' : ''}">AIの最善手</button>
@@ -780,11 +807,14 @@ function readResultHtml() {
       const oi = P.opts.indexOf(o);
       return `<tr class="${o === you ? 'you' : ''}"><td><span class="mk" style="color:${o.grade === 'best' ? 'var(--good)' : o.grade === 'slow' ? 'var(--warn)' : 'var(--bad)'}">${MARK[o.grade]}</span>${optShort(o)}${o === you ? '<span class="tag you">あなた</span>' : ''}</td>${o.cells.map((c, si) => `<td><span class="cell ${cellCls(c.c)} ${lineOpen && oi === vo && si === vs ? 'sel' : ''}" data-cell="${oi},${si}">${cellTxt(c.c)}${c.c.n ? `<small>${c.c.mine ? '自' : '敵'}${c.c.n}T</small>` : ''}</span></td>`).join('')}<td>${pct(o.ev)}</td></tr>`;
     }).join('')}</tbody></table>
-    <div class="hint">◎最善（勝てる手の中で勝率の差5%以内） ○惜しい（15%以内・正解扱い） ×不正解（一度も勝てない手を含む）／勝＝勝ち 負＝負け 分＝決着つかず（小さい数字は決着するターン）</div>
+    ${legendHtml('<b>◎</b> 最善（勝てる手の中で勝率の差5%以内）<br><b>○</b> 惜しい（15%以内・正解扱い）<br><b>×</b> 不正解（一度も勝てない手を含む）<br><b>勝</b>＝勝ち　<b>負</b>＝負け　<b>分</b>＝決着つかず（小さい数字は決着するターン）')}
     ${lineSection(`${optLabel(vopt)} × 相手が${scenShort(P.scen[vs])}`, `<div class="line">${lineHtml(cell.line, cell.c)}</div>`)}
     ${shareHtml()}
     ${nextButtons()}
   </div>`;
+}
+function legendHtml(inner) {
+  return `<button class="lgbtn" id="lgBtn">${showLegend ? '▲ 記号の見かたを閉じる' : '？ 記号の見かた'}</button>${showLegend ? `<div class="lgbox">${inner}</div>` : ''}`;
 }
 function nextButtons() {
   const label = reviewing ? (review.length ? '次の復習 →' : '復習を終える') : '次の問題 →';
@@ -792,11 +822,23 @@ function nextButtons() {
 }
 
 // ---------- 共有 ----------
-function shareHtml() {
-  return `<div class="share"><div class="sid">問題ID：<code>${puzzle.id}</code></div>
-    <div class="sbtns"><button data-copy="link">🔗 リンク</button><button data-copy="q">📋 問題文</button><button data-copy="qa">📋 答え付き</button></div>
-    <div class="sid" style="margin-top:6px">リンクは、このアプリを共有した相手が開けます（問題IDから同じ盤面を復元）</div>
-    <div id="copyArea"></div></div>`;
+function shareHtml() { return `<button class="sharebtn" id="shareBtn">📤 この問題を共有</button>`; }
+function openShare() {
+  const url = `${ART_URL}#${puzzle.id}`;
+  openSheet(`<div class="shsheet"><h2>📤 この問題を共有</h2>
+    <div class="sbtns"><button data-sh="link">🔗 リンクを共有</button><button data-sh="q">📋 問題文をコピー</button><button data-sh="qa">📋 答え付きでコピー</button></div>
+    <div class="sid">リンクを開くと、同じ盤面が出題されます（成績・連続記録の対象外）<br>問題ID：<code>${puzzle.id}</code></div>
+    <div id="copyArea"></div>
+    <button class="btn sec close" id="shX">閉じる</button></div>`);
+  document.getElementById('shX').onclick = closeSheet;
+  document.querySelectorAll('[data-sh]').forEach(el => el.onclick = async () => {
+    const t = el.dataset.sh;
+    if (t === 'link' && navigator.share) {
+      try { await navigator.share({ title: '殴り算（BeatMath）の問題', url }); return; }
+      catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    copyText(t === 'link' ? url : puzzleText(t === 'qa'));
+  });
 }
 function puzzleText(withAnswer) {
   const P = puzzle;
@@ -827,7 +869,7 @@ function copyText(text) {
   try { navigator.clipboard.writeText(text).then(() => toast('コピーしました'), fallback); } catch (e) { fallback(); }
 }
 let toastT = 0;
-function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 1800); }
+function toast(msg, ms) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), ms || 1800); }
 
 // ---------- 成績 ----------
 function showStats() {
@@ -871,7 +913,7 @@ function grantCards(n) {
 function renderCardBtn() {
   const b = document.getElementById('cardBtn'); if (!b) return;
   const have = TITLES.filter(t => cards[t.id]).length, unseen = TITLES.some(t => cards[t.id] && !cards[t.id].seen);
-  b.innerHTML = `🎖 称号 <b>${have}</b>/${TITLES.length}${unseen ? '<span class="dot"></span>' : ''}`;
+  b.innerHTML = `🎖<small>称号 ${have}/${TITLES.length}</small>${unseen ? '<span class="dot"></span>' : ''}`;
 }
 // 未獲得はシルエット表示。画像が読めない環境（claude.ai版など）では文字のプレートにする
 function bannerHtml(t, cls) {
@@ -1096,6 +1138,15 @@ function bind() {
   on('revStop', stopReview);
   document.querySelectorAll('[data-card]').forEach(el => el.onclick = () => { const s = el.dataset.card; showCard = showCard === s ? -1 : s; render(); });
   document.querySelectorAll('[data-cand]').forEach(el => el.onclick = () => { const s = 'c' + el.dataset.cand; showCard = showCard === s ? -1 : s; render(); });
+  // 能力名（キーワード）をタップすると説明を出す（攻撃の選択は切り替えない）
+  document.querySelectorAll('.card [data-kw]').forEach(el => el.onclick = e => { e.stopPropagation(); kwToast(el.dataset.kw); });
+  // 相手のクリーチャーは、カードのどこをタップしても能力の説明を出す
+  document.querySelectorAll('#oprow .card').forEach(el => el.onclick = () => {
+    const c = puzzle.board.op[+el.dataset.i]; const ks = c ? kwList(c) : [];
+    if (ks.length) toast(ks.map(l => `${l}：${kwDesc(l)}`).join(' ／ '), 3600);
+  });
+  on('lgBtn', () => { showLegend = !showLegend; render(); });
+  on('shareBtn', openShare);
   if (!answered) {
     document.querySelectorAll('#merow .card').forEach(el => { el.onclick = () => {
       const i = +el.dataset.i;
@@ -1108,16 +1159,12 @@ function bind() {
   document.querySelectorAll('[data-v]').forEach(el => el.onclick = () => { viewIdx = +el.dataset.v; lineOpen = true; scrollToLine = true; render(); });
   document.querySelectorAll('[data-cell]').forEach(el => el.onclick = () => { viewCell = el.dataset.cell.split(',').map(Number); lineOpen = true; scrollToLine = true; render(); });
   on('lineSec', () => { lineOpen = !lineOpen; render(); });
-  document.querySelectorAll('[data-copy]').forEach(el => el.onclick = () => {
-    const t = el.dataset.copy;
-    copyText(t === 'link' ? `${ART_URL}#${puzzle.id}` : puzzleText(t === 'qa'));
-  });
   on('next', () => {
     window.scrollTo(0, 0);
     if (reviewing) { if (review.length) loadId(review[0].id); else { reviewing = false; toast('復習完了！'); newPuzzle(); } }
     else newPuzzle();
   });
-  on('retry', () => { answered = false; sel = new Set(); castSel = null; viewIdx = -1; viewCell = null; lineOpen = false; render(); });
+  on('retry', () => { answered = false; sel = new Set(); castSel = null; viewIdx = -1; viewCell = null; lineOpen = false; showLegend = false; render(); });
 }
 
 function submit() {
@@ -1155,7 +1202,8 @@ function submit() {
       renderScore();
     }
   }
-  answered = true; viewIdx = -1; viewCell = null; lineOpen = false;
+  answered = true; viewIdx = -1; viewCell = null;
+  lineOpen = !(you && (you.grade === 'best' || you.grade === 'slow'));   // 不正解のときは、自分の攻撃の展開を最初から開く
   if (curRec.id === puzzle.id) { curRec.answered = true; store.set('cd_cur', curRec); }
   render();
   const r = document.querySelector('.result');
@@ -1166,17 +1214,58 @@ function renderScore() {
   const st = stats[mode][level];
   const p = st.n ? Math.round(st.best / st.n * 100) : 0;
   const extra = level === 'hard' ? `・ベスト <b>${myBest(mode)}</b>` : '';
-  document.getElementById('score').innerHTML = `${MODE_JA[mode]}・${LEVEL_JA[level]}<br>正解 <b>${st.best}</b>/${st.n}（${p}%）連続 <b>${st.streak}</b>${extra}`;
+  document.getElementById('score').innerHTML = `正解 <b>${st.best}</b>/${st.n}（${p}%）<br>連続 <b>${st.streak}</b>${extra}`;
 }
+const MODE_DESC = {
+  basic: '手札なし。盤面のクリーチャーだけで殴り合います。まずはここから',
+  fdn: 'お互いの手札（インスタント・瞬速／速攻クリーチャー）が公開された盤面。トリックも計算に入れます',
+  read: '相手の手札1枚が見えない盤面。候補カードから勝率がいちばん高い攻撃を選びます',
+};
+const LEVEL_DESC = { easy: 'クリーチャーもキーワード能力も少なめ', normal: 'クリーチャーとキーワード能力が増える', hard: 'いちばん複雑な盤面。連続正解がランキング・称号の対象' };
 function renderSeg() {
-  document.querySelectorAll('#levels button').forEach(b => {
-    b.classList.toggle('on', b.dataset.lv === level);
-    b.onclick = () => { if (level === b.dataset.lv && !reviewing) return; reviewing = false; level = b.dataset.lv; store.set('cd_level', level); renderSeg(); renderScore(); newPuzzle(); };
-  });
-  document.querySelectorAll('#modes button').forEach(b => {
-    b.classList.toggle('on', b.dataset.m === mode);
-    b.onclick = () => { if (mode === b.dataset.m && !reviewing) return; reviewing = false; mode = b.dataset.m; store.set('cd_mode', mode); renderSeg(); renderScore(); newPuzzle(); };
-  });
+  document.getElementById('selBtn').innerHTML = `<span style="min-width:0"><span class="m">${MODE_JA[mode]}</span><span class="lv">${LEVEL_JA[level]}</span></span><span class="arw">▼</span>`;
+  document.getElementById('selBtn').onclick = openSelect;
+}
+function openSelect() {
+  let m = mode, l = level;
+  const draw = () => {
+    openSheet(`<div class="selsheet"><h2>モードと難易度</h2>
+      <div class="lbl">モード</div>
+      <div class="seg mode">${MODES.map(x => `<button data-m="${x}" class="${x === m ? 'on' : ''}">${MODE_JA[x]}</button>`).join('')}</div>
+      <div class="desc">${MODE_DESC[m]}</div>
+      <div class="lbl">難易度</div>
+      <div class="seg">${LEVELS.map(x => `<button data-lv="${x}" class="${x === l ? 'on' : ''}">${LEVEL_JA[x]}</button>`).join('')}</div>
+      <div class="desc">${LEVEL_DESC[l]}</div>
+      <div class="btnrow" style="display:flex;gap:8px;margin-top:14px"><button class="btn sec" id="selX">閉じる</button><button class="btn" id="selOk">この設定で出題</button></div>
+      <button class="howto" id="selHow">遊び方を見る</button></div>`);
+    document.querySelectorAll('.selsheet [data-m]').forEach(b => b.onclick = () => { m = b.dataset.m; draw(); });
+    document.querySelectorAll('.selsheet [data-lv]').forEach(b => b.onclick = () => { l = b.dataset.lv; draw(); });
+    document.getElementById('selX').onclick = closeSheet;
+    document.getElementById('selHow').onclick = () => showTutorial(0);
+    document.getElementById('selOk').onclick = () => {
+      closeSheet();
+      if (m === mode && l === level && !reviewing) return;
+      reviewing = false; mode = m; level = l; store.set('cd_mode', mode); store.set('cd_level', level); renderSeg(); renderScore(); newPuzzle();
+    };
+  };
+  draw();
+}
+// ---------- 遊び方（初回だけ自動で表示。モード選択からいつでも見られる） ----------
+const TUT = [
+  { big: '👆', h: '攻撃するクリーチャーを選ぶ', p: 'あなたのクリーチャーをタップして、攻撃に参加させるものを選びます。0体（攻撃しない）も立派な選択肢です。<br>「飛行」などの能力名は、タップすると説明が出ます' },
+  { big: '⚔️', h: '攻撃を宣言して答え合わせ', p: '「攻撃を宣言」で回答。AIが全パターンを読み切った最善手と、<br>お互い最善を尽くした展開で答え合わせします' },
+  { big: '🏆', h: '「むずかしい」で連続正解を伸ばす', p: '連続正解でランキングに登録でき、称号バナーも手に入ります。<br>間違えた問題は「復習」にたまります' },
+];
+function showTutorial(i) {
+  const t = TUT[i], last = i === TUT.length - 1;
+  openSheet(`<div class="tut"><div class="stepn">遊び方 ${i + 1}/${TUT.length}</div><div class="big">${t.big}</div><h3>${t.h}</h3><p>${t.p}</p>
+    <div class="dots">${TUT.map((_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('')}</div>
+    <div class="btnrow">${i ? '<button class="btn sec" id="tutB">戻る</button>' : '<button class="btn sec" id="tutS">スキップ</button>'}<button class="btn" id="tutN">${last ? 'はじめる' : '次へ'}</button></div></div>`);
+  const done = () => { store.set('cd_tut', 1); closeSheet(); };
+  const b = document.getElementById('tutB'), sk = document.getElementById('tutS');
+  if (b) b.onclick = () => showTutorial(i - 1);
+  if (sk) sk.onclick = done;
+  document.getElementById('tutN').onclick = () => last ? done() : showTutorial(i + 1);
 }
 document.getElementById('reset').onclick = () => { MODES.forEach(m => LEVELS.forEach(l => { stats[m][l] = emptyStats(); })); store.set('cd_stats3', stats); renderScore(); toast('成績をリセットしました（連続正解の自己ベストは残ります）'); };
 document.getElementById('revBtn').onclick = startReview;
@@ -1192,7 +1281,11 @@ window.__cd = { get puzzle() { return puzzle; }, encode, decode };
 renderSeg(); renderScore(); saveReview(); grantCards(topBest());
 if (!HOSTED) ensureRanking();
 const h0 = (location.hash || '').slice(1);
-if (h0) loadId(h0); else newPuzzle();
+// 再読み込み：アドレスにIDを出さなくなったので、解いている途中の問題は保存した記録から再開する
+if (h0) loadId(h0);
+else if (curRec.id && !curRec.answered) loadId(curRec.id).then(ok => { if (!ok) newPuzzle(); });
+else newPuzzle();
+if (!store.get('cd_tut', 0)) { if (NEWBIE) showTutorial(0); else store.set('cd_tut', 1); }
 })();
 </script>
 </body>
