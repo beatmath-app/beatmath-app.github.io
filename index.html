@@ -2196,6 +2196,26 @@ function randMyHand(L, hc) {
 }
 
 // ---------- 生成（ランダム盤面 → 解く → フィルタ） ----------
+// 手札のインスタントが、どの時点でも対象を取れないか（取れないカードが手札にある盤面は使わない）。
+// 対象の向きはエンジンに合わせる：弱める・破壊する呪文は相手のクリーチャー、強める呪文は自分のクリーチャー。
+// hands[side] は唱える側の手札、hands[1-side] は相手の手札（読みでは候補すべて）。手札のクリーチャー（hc）も出てくる可能性があるので数える
+function noTarget(id, side, board, hc, hands) {
+  const opp = 1 - side;
+  const foes = (side === 0 ? board.op : board.me).concat(hc.filter(c => c.side === opp)).filter(c => !c.hx);   // 呪禁は対象にできない
+  const mine = hands[side] || [], theirs = hands[opp] || [];
+  switch (id) {
+    case 'BURST': return false;                                              // プレイヤーも対象にできる
+    case 'GG': case 'SURE': case 'FLIGHT': case 'VEIL': case 'DIVINE': return false;   // 自分のクリーチャーはいつもいる
+    case 'WINGS': return !foes.some(c => c.fly) && !mine.includes('FLIGHT');           // 飛行が1体もいない（束の間の飛行で与える組み合わせは除く）
+    case 'MOVE': {                                                           // パワー4以上にできるものが1体もいない
+      const up = Math.max(mine.some(x => x === 'GG' || x === 'SURE') ? 3 : 0,
+        theirs.some(x => x === 'GG' || x === 'SURE') ? 3 : theirs.some(x => x === 'FLIGHT' || x === 'VEIL') ? 1 : 0);
+      return !foes.some(c => c.p + up >= 4);
+    }
+    default: return foes.length === 0;                                       // クリーチャーを対象にする呪文：対象にできる相手のクリーチャーがいない
+  }
+}
+const hasDeadCard = (side, board, hc, hands) => (hands[side] || []).some(id => id && !/^C\d+$/.test(id) && noTarget(id, side, board, hc, hands));   // C0 などは手札のクリーチャー
 function tryPuzzle(levelName, lazy = false) {
   const L = LEVELS[levelName];
   const { board, tapped } = randBoard(L);
@@ -2212,6 +2232,7 @@ function tryPuzzle(levelName, lazy = false) {
   if (!mine.hand.length && !opHand.length) return null;
   const life = [rint(L.life[0], L.life[1]), rint(L.life[0], L.life[1])];
   const spec = { level: levelName, board, life, hand: [mine.hand, opHand], lands: [mine.lands, opLands], tapped, hc };
+  if (hasDeadCard(0, board, hc, spec.hand) || hasDeadCard(1, board, hc, spec.hand)) return null;   // 対象をまったく取れないカードが手札にある
   // まず手札を4ターンだけ考える速い探索でふるいにかけ、通ったものだけ10ターン全部インスタントを考えて解き直す
   for (const tp of [PRE_TRICK, 0]) {
     let p;
@@ -2266,9 +2287,9 @@ function tryRead(levelName, lazy = false) {
   const mine = randMyHand(L, hc);
   if (!mine) return null;
   const opLands = rint(1, 5);
-  const myFly = board.me.some(c => c.fly), myBig = board.me.some(c => c.p >= 4);
+  // 相手の候補は、唱えられて、対象を取れるものだけ（自分の手札にある強化は相手を対象にしない前提）
   const pool = CARD_IDS.filter(id => (id === 'REBUKE' ? opLands >= 2 : CARDS[id].cost <= opLands)
-    && !(id === 'WINGS' && !myFly) && !(id === 'MOVE' && !myBig));
+    && !noTarget(id, 1, board, hc, [mine.hand, [id]]));
   const cards = [];
   for (let guard = 0; cards.length < L.nCards && guard < 50; guard++) {
     if (Math.random() < L.creatureP[1]) {
@@ -2283,6 +2304,7 @@ function tryRead(levelName, lazy = false) {
   }
   if (cards.length < L.nCards) return null;
   const scen = cards.concat([null]);
+  if (hasDeadCard(0, board, hc, [mine.hand, cards])) return null;   // 自分の手札に、対象をまったく取れないカードがある
   const spec = { level: levelName, board, life, tapped, hand: [mine.hand, []], lands: [mine.lands, opLands], scen, hc };
   for (const tp of [PRE_TRICK, 0]) {
     let p;
