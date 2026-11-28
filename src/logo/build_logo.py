@@ -31,6 +31,13 @@ os.makedirs(OUT, exist_ok=True)
 
 NAVY, ACCENT, WHITE, SUB = '#0F1B2D', '#FF6B2C', '#FFFFFF', '#AEB8C8'
 GAP = 25  # ステンシルの切れ目の半幅（フォント単位）
+# ™（DejaVu Sans Bold の U+2122 をアウトライン化。左上原点・高さ1000）
+TM_D = 'M1484 0 1690 393 1896 0H2289V1000H1995V244L1758 687H1626L1389 244V1000H1092V0ZM896 0V247H595V1000H298V247H0V0Z'
+
+
+def tm(x, y):  # 文字列の列の座標で、高さ15pxの™
+    return f'<g transform="translate({x} {y}) scale(0.015)"><path d="{TM_D}" fill="{WHITE}"/></g>'
+
 
 
 # ---------- パスの基本処理 ----------
@@ -170,13 +177,14 @@ S = 0.018           # Russo One 18px
 
 def column(uid, with_sub=True):
     s = (f'<g transform="translate(0 114.4) scale({K})">{kanji_sliced(uid)}</g>'
-         f'<g transform="translate({80 * E:.2f} {148 + 880 * E:.2f}) scale({E:.5f})">{beatmath()}</g>')
+         f'<g transform="translate({80 * E:.2f} {148 + 880 * E:.2f}) scale({E:.5f})">{beatmath()}</g>'
+         + tm(398, 2) + tm(393, 152))   # 殴り算™・BEATMATH™
     if with_sub:
         s += f'<g transform="translate(0 {226 + 700 * S:.2f}) scale({S})"><path d="{SUB_D}" fill="{SUB}"/></g>'
     return s
 
 
-def lockup(uid):  # 646×244 相当（盾 220 ＋ 36 ＋ 文字列 390）
+def lockup(uid):  # 676×244 相当（盾 220 ＋ 36 ＋ 文字列 390 ＋ ™）
     return (f'<g transform="translate(0 0)">{emblem()}</g>'
             f'<g transform="translate(256 -12)">{column(uid)}</g>')
 
@@ -188,14 +196,14 @@ def save(name, text):
 
 # logo.svg（800×520、C4 と同じ配置）
 save('logo.svg',
-     f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" width="800" height="520" role="img" aria-label="殴り算 BeatMath">'
-     f'<rect width="800" height="520" fill="{NAVY}"/><g transform="translate(77 150)">{lockup("lg")}</g></svg>\n')
+     f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" width="800" height="520" role="img" aria-label="殴り算™ BeatMath™">'
+     f'<rect width="800" height="520" fill="{NAVY}"/><g transform="translate(62 150)">{lockup("lg")}</g></svg>\n')
 
 # og-image.svg（1200×630）
 save('og-image.svg',
      f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">'
      f'<rect width="1200" height="630" fill="{NAVY}"/>'
-     f'<g transform="translate(600 315) scale(1.5) translate(-323 -110)">{lockup("og")}</g></svg>\n')
+     f'<g transform="translate(600 315) scale(1.5) translate(-338 -110)">{lockup("og")}</g></svg>\n')
 
 # favicon.svg（角丸の紺地に盾と剣）
 save('favicon.svg',
@@ -212,9 +220,9 @@ save('_touch.svg',
 # 画面ヘッダー用（盾と剣 ＋ 殴り算/BEATMATH の2段、サブタイトルなし）
 with open(os.path.join(ROOT, 'src', 'logo', 'header-logo.html'), 'w') as f:
     f.write(
-     '<h1 class="logo" aria-label="殴り算 BeatMath">'
+     '<h1 class="logo" aria-label="殴り算™ BeatMath™">'
      f'<svg class="logo-emblem" viewBox="0 0 220 220" aria-hidden="true">{emblem(bg="#14161f")}</svg>'
-     f'<svg class="logo-word" viewBox="-4 -12 404 224" aria-hidden="true">{column("hd", with_sub=False)}</svg>'
+     f'<svg class="logo-word" viewBox="-4 -12 438 224" aria-hidden="true">{column("hd", with_sub=False)}</svg>'
      '</h1>\n')
 
 # PNG 書き出し
