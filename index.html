@@ -252,7 +252,7 @@ h1 span{color:var(--gold)}
 .sbtns{display:flex;gap:6px;margin-top:8px}
 .sbtns button{flex:1;padding:9px 0;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font:inherit;font-weight:700;font-size:12px}
 .copybox{width:100%;height:150px;margin-top:8px;background:#0e1018;color:var(--text);border:1px solid var(--line);border-radius:10px;font:12px/1.6 "M PLUS Rounded 1c",sans-serif;padding:8px}
-.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#000c;color:#fff;font-size:13px;font-weight:700;padding:9px 16px;border-radius:999px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#000d;color:#fff;font-size:13px;font-weight:700;padding:9px 16px;border-radius:16px;max-width:88vw;width:max-content;line-height:1.5;text-align:center;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20}
 .toast.show{opacity:1}
 .modal{position:fixed;inset:0;background:#0009;display:none;align-items:flex-end;justify-content:center;z-index:10}
 .modal.show{display:flex}
@@ -321,6 +321,16 @@ header h1.logo{display:flex;align-items:center;gap:8px;margin:0;line-height:0}
 .selsheet .lbl{font-size:12px;color:var(--sub);font-weight:800;margin:10px 0 6px}
 .selsheet .desc{font-size:12px;color:var(--sub);line-height:1.6;min-height:3.2em;margin:4px 2px 0}
 .selsheet .howto{display:block;margin:12px auto 0;background:none;border:none;color:var(--sub);font:inherit;font-size:12px;text-decoration:underline}
+/* ---- キーワードのタップ説明・凡例・共有 ---- */
+.card .kw .chip[data-kw]{position:relative;cursor:pointer}
+.card .kw .chip[data-kw]::after{content:'';position:absolute;inset:-7px -3px}
+.lgbtn{display:inline-block;margin:6px 0 0;background:none;border:none;padding:2px 0;color:var(--sub);font:inherit;font-size:12px;font-weight:700;text-decoration:underline}
+.lgbox{font-size:12px;color:var(--sub);line-height:1.7;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 10px;margin-top:6px}
+.lgbox b{color:var(--text)}
+.sharebtn{display:block;width:100%;margin-top:14px;padding:10px 0;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--text);font:inherit;font-weight:800;font-size:13px}
+.shsheet .sbtns{flex-direction:column}
+.shsheet .sbtns button{padding:12px 0;font-size:14px}
+.shsheet .sid{font-size:11px;color:var(--sub);word-break:break-all;margin-top:8px}
 /* ---- 遊び方 ---- */
 .tut{text-align:center}
 .tut .stepn{font-size:12px;color:var(--sub);font-weight:800}
@@ -2393,7 +2403,7 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;'
 // ---------- state ----------
 let castSel = null;
 let puzzle = null, sel = new Set(), answered = false, viewIdx = -1, viewCell = null, lineOpen = false, scrollToLine = false;
-let showPremise = false, showCard = -1, reviewing = false, loadToken = 0;
+let showPremise = false, showLegend = false, showCard = -1, reviewing = false, loadToken = 0;
 const next = {};
 const app = document.getElementById('app');
 const NM = [['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'], ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧']];
@@ -2603,7 +2613,9 @@ const cname = id => isCre(id) ? `《${creName(hcd(id))}》` : `《${CARDS[id].ja
 const cshort = id => isCre(id) ? `${hcd(id).haste ? '速攻' : '瞬速'}${hcd(id).p}/${hcd(id).t}` : CARDS[id].ja;
 const cmana = id => isCre(id) ? `{${hcd(id).cost}}` : CARDS[id].mana;
 const scenShort = h => h ? cname(h) : '基本土地';
-function kwHtml(c) { return kwList(c).map(l => `<span class="chip ${l === '飛行' ? 'fly' : l === '到達' ? 'reach' : l === '速攻' ? 'k3' : 'k2'}">${l}</span>`).join(''); }
+function kwHtml(c) { return kwList(c).map(l => `<span class="chip ${l === '飛行' ? 'fly' : l === '到達' ? 'reach' : l === '速攻' ? 'k3' : 'k2'}" data-kw="${l}">${l}</span>`).join(''); }
+const kwDesc = l => l.startsWith('護法') ? KW_DESC['護法'].replace('{N}', l.slice(2)) : KW_DESC[l];
+const kwToast = l => toast(`${l}：${kwDesc(l)}`, 3200);
 function creText(id) {
   const d = hcd(id);
   const base = d.haste ? '速攻：戦場に出たターンから攻撃できる。自分のメインフェイズに唱える（戦闘前に出すかは「戦闘前に唱える」ボタンで選ぶ）'
@@ -2772,7 +2784,7 @@ function render() {
   </div>`;
   if (!answered) {
     html += `<div class="q">どの生物で攻撃する？</div>
-    <div class="hint" style="text-align:center;margin-top:-4px">カードをタップして攻撃する生物を選択（0体でもOK・防衛は攻撃不可）${read ? '<br>相手の手札の候補をタップすると効果を確認できます' : fdn ? '<br>手札のインスタント・瞬速クリーチャーはAIが最適なタイミングで使います' : ''}</div>
+    <div class="hint" style="text-align:center;margin-top:-4px">タップで攻撃する生物を選ぶ（0体でもOK）<br>能力名${read ? '・相手の手札の候補' : fdn ? '・手札' : ''}はタップで説明</div>
     <div class="actions"><button class="btn" id="go">${sel.size ? '攻撃を宣言' : '攻撃しないで確定'}</button></div>`;
   } else html += read ? readResultHtml() : resultHtml();
   app.innerHTML = html;
@@ -2833,7 +2845,7 @@ function resultHtml() {
         <span class="atk">${optLabel(o)}${o === you ? '<span class="tag you">あなた</span>' : ''}${o.grade === 'best' ? '<span class="tag ai">AI</span>' : ''}${isNaive(o) && o.grade !== 'best' ? '<span class="tag naive">手札無視なら正解</span>' : ''}</span>
         <span class="out">${outLabel(o.c)}${sameTurnWorse(o, bests[0]) ? '（盤面で損）' : ''}</span></div>`;
     }).join('')}</div>
-    <div class="hint">◎最善 ○勝てるが遅い／盤面で損（正解扱い） △決着つかず／見劣り ×負け</div>
+    ${legendHtml('<b>◎</b> 最善　<b>○</b> 勝てるが遅い／盤面で損（正解扱い）<br><b>△</b> 決着つかず／見劣り　<b>×</b> 負け')}
     ${lineSection(optLabel(vo), `<div class="tabs">
       <button data-v="${yi}" class="${viewIdx === yi ? 'on' : ''}">あなたの攻撃</button>
       <button data-v="${bi}" class="${viewIdx === bi ? 'on' : ''}">AIの最善手</button>
@@ -2884,11 +2896,14 @@ function readResultHtml() {
       const oi = P.opts.indexOf(o);
       return `<tr class="${o === you ? 'you' : ''}"><td><span class="mk" style="color:${o.grade === 'best' ? 'var(--good)' : o.grade === 'slow' ? 'var(--warn)' : 'var(--bad)'}">${MARK[o.grade]}</span>${optShort(o)}${o === you ? '<span class="tag you">あなた</span>' : ''}</td>${o.cells.map((c, si) => `<td><span class="cell ${cellCls(c.c)} ${lineOpen && oi === vo && si === vs ? 'sel' : ''}" data-cell="${oi},${si}">${cellTxt(c.c)}${c.c.n ? `<small>${c.c.mine ? '自' : '敵'}${c.c.n}T</small>` : ''}</span></td>`).join('')}<td>${pct(o.ev)}</td></tr>`;
     }).join('')}</tbody></table>
-    <div class="hint">◎最善（勝てる手の中で勝率の差5%以内） ○惜しい（15%以内・正解扱い） ×不正解（一度も勝てない手を含む）／勝＝勝ち 負＝負け 分＝決着つかず（小さい数字は決着するターン）</div>
+    ${legendHtml('<b>◎</b> 最善（勝てる手の中で勝率の差5%以内）<br><b>○</b> 惜しい（15%以内・正解扱い）<br><b>×</b> 不正解（一度も勝てない手を含む）<br><b>勝</b>＝勝ち　<b>負</b>＝負け　<b>分</b>＝決着つかず（小さい数字は決着するターン）')}
     ${lineSection(`${optLabel(vopt)} × 相手が${scenShort(P.scen[vs])}`, `<div class="line">${lineHtml(cell.line, cell.c)}</div>`)}
     ${shareHtml()}
     ${nextButtons()}
   </div>`;
+}
+function legendHtml(inner) {
+  return `<button class="lgbtn" id="lgBtn">${showLegend ? '▲ 記号の見かたを閉じる' : '？ 記号の見かた'}</button>${showLegend ? `<div class="lgbox">${inner}</div>` : ''}`;
 }
 function nextButtons() {
   const label = reviewing ? (review.length ? '次の復習 →' : '復習を終える') : '次の問題 →';
@@ -2896,11 +2911,23 @@ function nextButtons() {
 }
 
 // ---------- 共有 ----------
-function shareHtml() {
-  return `<div class="share"><div class="sid">問題ID：<code>${puzzle.id}</code></div>
-    <div class="sbtns"><button data-copy="link">🔗 リンク</button><button data-copy="q">📋 問題文</button><button data-copy="qa">📋 答え付き</button></div>
-    <div class="sid" style="margin-top:6px">リンクは、このアプリを共有した相手が開けます（問題IDから同じ盤面を復元）</div>
-    <div id="copyArea"></div></div>`;
+function shareHtml() { return `<button class="sharebtn" id="shareBtn">📤 この問題を共有</button>`; }
+function openShare() {
+  const url = `${ART_URL}#${puzzle.id}`;
+  openSheet(`<div class="shsheet"><h2>📤 この問題を共有</h2>
+    <div class="sbtns"><button data-sh="link">🔗 リンクを共有</button><button data-sh="q">📋 問題文をコピー</button><button data-sh="qa">📋 答え付きでコピー</button></div>
+    <div class="sid">リンクを開くと、同じ盤面が出題されます（成績・連続記録の対象外）<br>問題ID：<code>${puzzle.id}</code></div>
+    <div id="copyArea"></div>
+    <button class="btn sec close" id="shX">閉じる</button></div>`);
+  document.getElementById('shX').onclick = closeSheet;
+  document.querySelectorAll('[data-sh]').forEach(el => el.onclick = async () => {
+    const t = el.dataset.sh;
+    if (t === 'link' && navigator.share) {
+      try { await navigator.share({ title: '殴り算（BeatMath）の問題', url }); return; }
+      catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    copyText(t === 'link' ? url : puzzleText(t === 'qa'));
+  });
 }
 function puzzleText(withAnswer) {
   const P = puzzle;
@@ -2931,7 +2958,7 @@ function copyText(text) {
   try { navigator.clipboard.writeText(text).then(() => toast('コピーしました'), fallback); } catch (e) { fallback(); }
 }
 let toastT = 0;
-function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 1800); }
+function toast(msg, ms) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), ms || 1800); }
 
 // ---------- 成績 ----------
 function showStats() {
@@ -3200,6 +3227,15 @@ function bind() {
   on('revStop', stopReview);
   document.querySelectorAll('[data-card]').forEach(el => el.onclick = () => { const s = el.dataset.card; showCard = showCard === s ? -1 : s; render(); });
   document.querySelectorAll('[data-cand]').forEach(el => el.onclick = () => { const s = 'c' + el.dataset.cand; showCard = showCard === s ? -1 : s; render(); });
+  // 能力名（キーワード）をタップすると説明を出す（攻撃の選択は切り替えない）
+  document.querySelectorAll('.card [data-kw]').forEach(el => el.onclick = e => { e.stopPropagation(); kwToast(el.dataset.kw); });
+  // 相手のクリーチャーは、カードのどこをタップしても能力の説明を出す
+  document.querySelectorAll('#oprow .card').forEach(el => el.onclick = () => {
+    const c = puzzle.board.op[+el.dataset.i]; const ks = c ? kwList(c) : [];
+    if (ks.length) toast(ks.map(l => `${l}：${kwDesc(l)}`).join(' ／ '), 3600);
+  });
+  on('lgBtn', () => { showLegend = !showLegend; render(); });
+  on('shareBtn', openShare);
   if (!answered) {
     document.querySelectorAll('#merow .card').forEach(el => { el.onclick = () => {
       const i = +el.dataset.i;
@@ -3212,16 +3248,12 @@ function bind() {
   document.querySelectorAll('[data-v]').forEach(el => el.onclick = () => { viewIdx = +el.dataset.v; lineOpen = true; scrollToLine = true; render(); });
   document.querySelectorAll('[data-cell]').forEach(el => el.onclick = () => { viewCell = el.dataset.cell.split(',').map(Number); lineOpen = true; scrollToLine = true; render(); });
   on('lineSec', () => { lineOpen = !lineOpen; render(); });
-  document.querySelectorAll('[data-copy]').forEach(el => el.onclick = () => {
-    const t = el.dataset.copy;
-    copyText(t === 'link' ? `${ART_URL}#${puzzle.id}` : puzzleText(t === 'qa'));
-  });
   on('next', () => {
     window.scrollTo(0, 0);
     if (reviewing) { if (review.length) loadId(review[0].id); else { reviewing = false; toast('復習完了！'); newPuzzle(); } }
     else newPuzzle();
   });
-  on('retry', () => { answered = false; sel = new Set(); castSel = null; viewIdx = -1; viewCell = null; lineOpen = false; render(); });
+  on('retry', () => { answered = false; sel = new Set(); castSel = null; viewIdx = -1; viewCell = null; lineOpen = false; showLegend = false; render(); });
 }
 
 function submit() {
@@ -3259,7 +3291,8 @@ function submit() {
       renderScore();
     }
   }
-  answered = true; viewIdx = -1; viewCell = null; lineOpen = false;
+  answered = true; viewIdx = -1; viewCell = null;
+  lineOpen = !(you && (you.grade === 'best' || you.grade === 'slow'));   // 不正解のときは、自分の攻撃の展開を最初から開く
   if (curRec.id === puzzle.id) { curRec.answered = true; store.set('cd_cur', curRec); }
   render();
   const r = document.querySelector('.result');
@@ -3308,7 +3341,7 @@ function openSelect() {
 }
 // ---------- 遊び方（初回だけ自動で表示。モード選択からいつでも見られる） ----------
 const TUT = [
-  { big: '👆', h: '攻撃するクリーチャーを選ぶ', p: 'あなたのクリーチャーをタップして、攻撃に参加させるものを選びます。<br>0体（攻撃しない）も立派な選択肢です' },
+  { big: '👆', h: '攻撃するクリーチャーを選ぶ', p: 'あなたのクリーチャーをタップして、攻撃に参加させるものを選びます。0体（攻撃しない）も立派な選択肢です。<br>「飛行」などの能力名は、タップすると説明が出ます' },
   { big: '⚔️', h: '攻撃を宣言して答え合わせ', p: '「攻撃を宣言」で回答。AIが全パターンを読み切った最善手と、<br>お互い最善を尽くした展開で答え合わせします' },
   { big: '🏆', h: '「むずかしい」で連続正解を伸ばす', p: '連続正解でランキングに登録でき、称号バナーも手に入ります。<br>間違えた問題は「復習」にたまります' },
 ];
