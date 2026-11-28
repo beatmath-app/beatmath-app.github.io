@@ -36,4 +36,15 @@ const C=(p,t,x={})=>Object.assign({p,t},x);
 // 11 Rebuke cost 2 only vs tapped
 { const s=st([C(3,3),C(3,3)],[C(1,1)],{hand:[null,'REBUKE'],lands:[1,2]}); s.cr[0][0].tap=true; s.atk=1; s.phase='w2'; s.win={prio:1,passes:0,stack:[]};
   const o=U.castOptions(s,1); ok(o.length===1&&o[0].tg[0][1]===0,'光明の叱責：タップ状態なら2マナ（アンタップには5マナ）'); }
+// 12 double strike vs double block: all first-strike damage on the 4/4 deathtouch, then 2 more kills it
+{ const s=st([C(2,1,{ds:true})],[C(4,4,{dt:true}),C(1,1)]); s.atk=1; s.blk=[0,0]; s.phase='dmg';
+  const outs=U.combatDamage(s); ok(outs.some(o=>!o.s.cr[1][0].alive&&o.s.cr[1][1].alive),'二段攻撃：先制ダメージを4/4接死に集め、通常ダメージと合わせて倒せる'); }
+// 13 no blocker can be killed: damage can go to either blocker (matters for post-combat burn)
+{ const s=st([C(3,3)],[C(5,5),C(4,4)]); s.atk=1; s.blk=[0,0]; s.phase='dmg';
+  const outs=U.combatDamage(s); ok(outs.some(o=>o.s.cr[1][1].dmg===3)&&outs.some(o=>o.s.cr[1][0].dmg===3),'倒しきれないダブルブロック：どちらのブロッカーにもダメージを入れられる'); }
+// 14 basic engine: 2/1 double strike kills the 4/4 deathtouch in a double block → A・D wins on turn 3
+{ const V=require('../engine.js'); const b={me:[{p:4,t:6},{p:3,t:4},{p:3,t:4,tr:true,vg:true},{p:2,t:1,ds:true}],op:[{p:4,t:4,dt:true},{p:1,t:1}]};
+  for (const c of b.me.concat(b.op)) { c.fly=false; c.reach=false; }
+  const o=V.makeSolver(b,30).rootOptions({a:[15,3],life:[4,13],turn:0,tapped:0}); V.gradeOptions(o);
+  const ad=o.find(x=>x.attackers.join()==='0,3'); ok(ad.c.cls==='win'&&ad.c.n===3,'基本：2/1二段攻撃がダブルブロックの4/4接死を倒せる（A・Dで3ターン目に勝ち）'); }
 console.log(fails?`${fails} FAILED`:'ALL PASS');
