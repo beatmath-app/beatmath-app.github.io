@@ -429,7 +429,7 @@ function cloneCr(c) {
 function clone(s) {
   return {
     ply: s.ply, act: s.act, life: s.life.slice(), hand: [s.hand[0].slice(), s.hand[1].slice()], lands: s.lands, mana: s.mana.slice(), phase: s.phase,
-    quiet: s.quiet, pp: s.pp,
+    quiet: s.quiet, pp: s.pp, dr: s.dr.slice(),
     cr: [s.cr[0].map(cloneCr), s.cr[1].map(cloneCr)],
     atk: s.atk, blk: s.blk ? s.blk.slice() : null,
     win: s.win ? { prio: s.win.prio, passes: s.win.passes, stack: s.win.stack.map(x => ({ c: x.c, by: x.by, tg: x.tg.slice(), kick: x.kick })) } : null,
@@ -609,7 +609,7 @@ function resolveSpell(s, x, ev) {
     }
     case 'DIVINE': x.tg.forEach((tg, k) => { if (ok[k]) cr(tg).ind = true; }); break;
     case 'FLIGHT': { const c = cr(tg0); c.ctr += 1; c.tfly = true; c.prev = true; break; }
-    case 'DISTRACT': { cr(tg0).tp -= 1; break; }
+    case 'DISTRACT': { cr(tg0).tp -= 1; s.dr[by] += 1; break; }   // カードを1枚引く（手札の枚数としてだけ数える）
     case 'VEIL': { const c = cr(tg0); c.ctr += 1; c.hex = true; break; }
     case 'BITE': {
       if (!ok[0]) break;
@@ -698,7 +698,7 @@ function endBonus(s, iWin) {
   for (const side of [0, 1]) {
     const sg = side === 0 ? 1 : -1;
     for (const c of s.cr[side]) if (c.alive) v += sg;
-    v += sg * s.hand[side].length;
+    v += sg * (s.hand[side].length + s.dr[side]);
   }
   return Math.max(-400, Math.min(400, v)) / 1024;
 }
@@ -723,7 +723,8 @@ function advance(s, ev, maxPly) {
         if (!s.win) {
           if (s.phase === 'w1' && vanillaHook && !disableVanilla && s.ply > 0 && (handCount(s) === 0 || s.ply >= trickPly)) {
             let v = vanillaHook(s);
-            if (Math.abs(v) < 900) v += 12 * (s.hand[0].length - s.hand[1].length);
+            const hd = s.hand[0].length + s.dr[0] - s.hand[1].length - s.dr[1];
+            v += Math.abs(v) < 900 ? 12 * hd : hd / 1024;   // 決着する場合は、決着時の比べ方（数の差）にそろえる
             s.val = v; s.vanilla = true; s.approx = handCount(s) > 0; return s;
           }
           openWindow(s, s.phase);
@@ -858,7 +859,7 @@ function heuristic(s) {
   for (const side of [0, 1]) {
     const sg = side === 0 ? 1 : -1;
     for (const c of s.cr[side]) if (c.alive) v += sg * ccValue(Object.assign({ fly: c.fly }, c.k), c.p + c.ctr, c.t + c.ctr);
-    v += sg * 12 * s.hand[side].length;
+    v += sg * 12 * (s.hand[side].length + s.dr[side]);
   }
   v += 3 * (s.life[0] - s.life[1]);
   return Math.max(-400, Math.min(400, v));
@@ -867,7 +868,7 @@ function heuristic(s) {
 function keyOf(s, noPly) { return s.phase + (noPly ? '' : s.ply) + keyRest(s); }
 // 局面の記録用の文字列（手数より後ろの部分）
 function keyRest(s) {
-  let k = (s.quiet ? 'q' : '') + (s.pp ? 'p' : '') + '|' + s.act + '|' + s.life[0] + ',' + s.life[1] + '|' + s.hand[0].join('.') + ',' + s.hand[1].join('.') + '|' + s.mana[0] + ',' + s.mana[1] + '|' + s.atk + '|' + (s.blk ? s.blk.join('.') : '') + '|';
+  let k = (s.quiet ? 'q' : '') + (s.pp ? 'p' : '') + '|' + s.act + '|' + s.dr[0] + ',' + s.dr[1] + '|' + s.life[0] + ',' + s.life[1] + '|' + s.hand[0].join('.') + ',' + s.hand[1].join('.') + '|' + s.mana[0] + ',' + s.mana[1] + '|' + s.atk + '|' + (s.blk ? s.blk.join('.') : '') + '|';
   for (const side of [0, 1]) for (const c of s.cr[side]) {
     k += c.alive ? (c.tap ? 'T' : 'U') + (c.sick ? 's' : '') + c.ctr + ',' + c.tp + ',' + c.tt + ',' + c.dmg + (c.dtHit ? 'd' : '') + (c.fs ? 'f' : '') + (c.ind ? 'i' : '') + (c.hex ? 'h' : '') + (c.prev ? 'p' : '') + (c.tfly ? 'y' : '') + ';' : 'x;';
   }
@@ -1029,6 +1030,7 @@ function initialState(board, life, hand, lands, tappedOp) {
   const s = {
     ply: 0, act: 0, life: life.slice(), hand: [hand[0].slice(), hand[1].slice()], lands: lands.slice(), mana: lands.slice(), phase: 'atk',
     quiet: true, pp: false,   // quiet: このターンまだ誰も攻撃も呪文もしていない / pp: 前のターンがそうだった
+    dr: [0, 0],   // 呪文で引いたカードの枚数（ライブラリーは扱わないので、手札の枚数を数えるときだけ足す）
     cr: [board.me.map(newCreature), board.op.map(newCreature)], atk: 0, blk: null, win: null,
   };
   for (const id of Object.keys(HC)) {
