@@ -1,4 +1,4 @@
-# 殴り算™（BeatMath™）
+# 殴り算（BeatMath）
 
 ![殴り算 BeatMath](assets/logo.svg)
 

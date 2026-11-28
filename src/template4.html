@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <!--HEAD_EXTRA-->
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>殴り算™（BeatMath™）｜MTGコンバットクイズ</title>
+<title>殴り算（BeatMath）｜MTGコンバットクイズ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap" rel="stylesheet">
@@ -832,7 +832,7 @@ function openShare() {
   document.querySelectorAll('[data-sh]').forEach(el => el.onclick = async () => {
     const t = el.dataset.sh;
     if (t === 'link' && navigator.share) {
-      try { await navigator.share({ title: '殴り算™（BeatMath™）の問題', url }); return; }
+      try { await navigator.share({ title: '殴り算（BeatMath）の問題', url }); return; }
       catch (e) { if (e && e.name === 'AbortError') return; }
     }
     copyText(t === 'link' ? url : puzzleText(t === 'qa'));
