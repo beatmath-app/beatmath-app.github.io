@@ -540,7 +540,7 @@ function atkLabel(arr) { return arr.length ? arr.map(i => NM[0][i]).join('・') 
 function optLabel(o) { return (o.cast ? `${NM[0][slotOf(o.cast)]}を唱えて ` : '') + atkLabel(o.attackers); }
 function optShort(o) { return (o.cast ? `${NM[0][slotOf(o.cast)]}唱え＋` : '') + (o.attackers.length ? o.attackers.map(i => NM[0][i]).join('・') : '攻撃なし'); }
 const optMatch = (o, cast, mine) => (o.cast || null) === (cast || null) && sameSet(o.attackers, mine);
-// 最善と同じターンに勝てるが、勝った時点の盤面（残ったクリーチャー・手札・ライフ）で劣る手
+// 最善と同じターンに勝てるが、勝った時点の盤面（クリーチャー・手札の枚数の差）で劣る手
 const sameTurnWorse = (o, b) => o.grade === 'slow' && b && o.c.cls === 'win' && b.c.cls === 'win' && o.c.n === b.c.n && o.c.mine === b.c.mine;
 function outLabel(c) {
   if (c.cls === 'win') return c.mine ? (c.n === 1 ? 'このターンで勝ち' : `自分の${c.n}ターン目に勝ち`) : `相手の${c.n}ターン目中に勝ち`;

@@ -127,15 +127,15 @@ function makeSolver(board, maxPly, deadline = 0) {
     return Math.max(-400, Math.min(400, v));
   }
 
-  // 決着した時点の盤面の良さ（同じターンの勝ち・負けを比べる用）：残ったクリーチャーと勝った側の残りライフ。1/1024 単位の端数
+  // 決着した時点の盤面の良さ（同じターンの勝ち・負けを比べる用）：自分のクリーチャー数 − 相手のクリーチャー数。
+  // 大きさとライフは見ない（相討ちは損にしない）。1/1024 単位の端数
   function endBonus1(st, iWin) {
     let v = 0;
     for (const side of [0, 1]) {
       const cs = sides[side], sg = side === 0 ? 1 : -1;
-      for (let i = 0; i < cs.length; i++) if (st.a[side] >> i & 1) v += sg * ccValue(cs[i], cs[i].p, cs[i].t);
+      for (let i = 0; i < cs.length; i++) if (st.a[side] >> i & 1) v += sg;
     }
-    v += iWin ? 3 * Math.max(0, st.life[0]) : -3 * Math.max(0, st.life[1]);
-    return Math.max(-400, Math.min(400, v)) / 1024;
+    return v / 1024;
   }
 
   function key(st, ply) {
