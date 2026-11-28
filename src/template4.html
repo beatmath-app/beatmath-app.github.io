@@ -718,7 +718,6 @@ function insight(you, bests) {
   const mc = firstCast(b.line, 0);
   if (b.cast && you.cast !== b.cast) msgs.push(`最善手は、${cname(b.cast)}を戦闘前に唱えて攻撃に加えることです。`);
   if (mc) msgs.push(`最善の展開では、あなたの${cname(mc.c)}を ${mc.tg.map(tgPlain).join('・')} に使います。`);
-  else if (P.hand[0].length && b.c.cls === 'win') msgs.push(`最善の展開では、あなたの手札は使わずに勝てます（構えておくこと自体が効いています）。`);
   if (P.best.cls !== 'win') msgs.push('この盤面は勝ち切れないので、「負けない」ことが最優先です。');
   return msgs.join('');
 }
