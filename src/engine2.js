@@ -66,7 +66,7 @@ function ccStep(att, blk, st, step) {
     const L = [];
     for (let j = 0; j < blk.length; j++) if (blk[j].target === i && st.bAlive[j]) L.push(j);
     if (!L.length) { if (a.tr) { toP += a.P; if (a.ll) gainA += a.P; } continue; }   // ブロッカーが全滅：トランプルなら全部通る
-    choiceLists.push({ i, opts: ccAssign(a, L, blk, st) });
+    choiceLists.push({ i, opts: ccAssign(a, L, blk, st, step) });
   }
   let combos = [[]];
   for (const cl of choiceLists) { const nx = []; for (const c of combos) for (const o of cl.opts) nx.push(c.concat([[cl.i, o]])); combos = nx; }
@@ -86,7 +86,7 @@ function ccStep(att, blk, st, step) {
   });
 }
 // 複数（または1体）にブロックされた攻撃クリーチャーのダメージの割り振り方
-function ccAssign(a, L, blk, st) {
+function ccAssign(a, L, blk, st, step) {
   const P = a.P;
   const need = L.map(j => ccNeed(blk[j], st.bDmg[j], a.dt));
   const sumNeed = need.reduce((x, y) => x + y, 0);
@@ -109,6 +109,22 @@ function ccAssign(a, L, blk, st) {
     else res.push({ to: base, player: 0 });
   }
   if (!res.length) { const k = kill.indexOf(true); res.push({ to: [[L[k >= 0 ? k : 0], P]], player: 0 }); }
+  // 二段攻撃の先制ダメージは通常ダメージと合わせて効くので、倒しきれない分け方も意味がある（例：2/1二段攻撃が4/4に2点＋2点）。
+  // どのブロッカーも倒しきれないときも、戦闘後の呪文で削りきれるかが分け方で変わる。どちらの場合も分け方をすべて候補にする
+  if ((step === 1 && a.ds) || !feas.length) {
+    const ks = []; for (let k = 0; k < n; k++) if (kill[k]) ks.push(k);
+    const seen = new Set(res.map(r => r.to.filter(t => t[1] > 0).map(t => t[0] + ':' + t[1]).sort().join()));
+    const rec = (idx, left, cur) => {
+      if (idx === ks.length - 1) {
+        const to = cur.concat([[L[ks[idx]], left]]).filter(t => t[1] > 0);
+        const k = to.map(t => t[0] + ':' + t[1]).sort().join();
+        if (!seen.has(k)) { seen.add(k); res.push({ to, player: 0 }); }
+        return;
+      }
+      for (let d = 0; d <= left; d++) rec(idx + 1, left - d, d ? cur.concat([[L[ks[idx]], d]]) : cur);
+    };
+    if (ks.length) rec(0, P, []);
+  }
   return res;
 }
 // クリーチャーの盤面価値（評価関数）— 両エンジン共通
