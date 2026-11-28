@@ -1263,7 +1263,7 @@ function randMyHand(L, hc) {
     lands = rint(lo, hi);
   } else if (inst || cre) {
     const c = inst ? (CARDS[inst].cost === 5 ? 2 : CARDS[inst].cost) : cre.cost;
-    lands = Math.random() < 0.85 ? rint(Math.min(5, c), 5) : rint(1, 5);
+    lands = rint(Math.min(5, c), 5);   // 手札は必ず唱えられる土地の枚数にする（光明の叱責はタップ状態が対象なら2マナ）
   } else lands = rint(1, 5);
   if (inst) hand.push(inst);
   if (cre) { hand.push('C' + hc.length); hc.push(cre); }
@@ -1280,8 +1280,9 @@ function tryPuzzle(levelName, lazy = false) {
   const opHand = [];
   let opLands = rint(1, 5);
   if (Math.random() < L.handP[1]) {
-    if (Math.random() < L.creatureP[1]) { const c = randHandCreature(1); opHand.push('C' + hc.length); hc.push(c); opLands = Math.random() < 0.85 ? rint(c.cost, 5) : opLands; }
-    else { const id = CARD_IDS[rint(0, CARD_IDS.length - 1)]; opHand.push(id); const c = CARDS[id].cost === 5 ? 2 : CARDS[id].cost; opLands = Math.random() < 0.85 ? rint(Math.min(5, c), 5) : opLands; }
+    // 相手の手札も必ず唱えられる土地の枚数にする
+    if (Math.random() < L.creatureP[1]) { const c = randHandCreature(1); opHand.push('C' + hc.length); hc.push(c); opLands = rint(c.cost, 5); }
+    else { const id = CARD_IDS[rint(0, CARD_IDS.length - 1)]; opHand.push(id); const c = CARDS[id].cost === 5 ? 2 : CARDS[id].cost; opLands = rint(Math.min(5, c), 5); }
   }
   if (!mine.hand.length && !opHand.length) return null;
   const life = [rint(L.life[0], L.life[1]), rint(L.life[0], L.life[1])];
