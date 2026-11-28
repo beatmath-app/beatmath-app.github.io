@@ -31,4 +31,4 @@
 - 不適切な名前や記録は、Firebaseコンソール →「Firestore Database」→ `ranking` から該当ドキュメントを削除してください。
 
 ---
-本アプリは非公式のファンメイドです。Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.
+殴り算™ (BeatMath™) is unofficial Fan Content permitted under the [Fan Content Policy](https://company.wizards.com/en/legal/fancontentpolicy). Not approved/endorsed by Wizards. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC.
